@@ -1,4 +1,4 @@
-# Odata2PG
+# Central2PG
 ## PostgreSQL's functions to retrieve datas from ODK Central's OData API to a PostgreSQL database 
 
 Fonctions pl/pgsql de récupération des données d'ODK central vers une base de données PostgreSQL
