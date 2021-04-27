@@ -50,8 +50,14 @@ FROM odk_central.get_form_tables_list_from_central('my_email@address.org','my_pa
 SELECT odk_central.feed_data_tables_from_central('odk_central',concat('form_',lower(form),'_',lower(split_part(tablename,'.',cardinality(regexp_split_to_array(tablename,'\.'))))))
 FROM odk_central.get_form_tables_list_from_central('my_email@address.org','my_passw0rd','central.myserver.org',	4,'Sicen');
 
+/* 
+	This is a view build upon generated data tables for our particular needs
+*/
 REFRESH MATERIALIZED VIEW odk_central.donnees_formulaire_sicen;
 
+/* 	
+	here we get attachments 
+*/
 SELECT outils.get_file_from_central_api(
 	submission_id,
 	prise_image,
@@ -63,7 +69,18 @@ SELECT outils.get_file_from_central_api(
 ) FROM odk_central.donnees_formulaire_sicen
 WHERE prise_image IS NOT NULL;
 
+/* 
+	And here we ull data from the materialiezd view to our internat tool table, 
+	to show ODK Collect data within our web internal tool and also QGIS or Redash
+	This function just perform an 
+	INSERT INTO table(data_id, col1,col2...)
+	SELECT col_a, col_b,... 
+	FROM odk_central.donnees_formulaire_sicen 
+	LEFT JOIN data_already_there USING(data_id) 
+	WHERE data_already_there.data_id IS NULL --to insert only new datas
+*/
 SELECT odk_central.formulaire_sicen_alimente_saisie_observation_especes();
+/* 
 ```
 
 Functions are created in a schema named "odk_central". Adapt it to your needs.
