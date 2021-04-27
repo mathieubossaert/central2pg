@@ -28,11 +28,7 @@ FROM outils.get_form_tables_list_from_odata('my_login','my_password','odata_serv
 
 SELECT outils.feed_data_tables_from_odata('odk_central',concat('form_',lower(form),'_',lower(split_part(tablename,'.',cardinality(regexp_split_to_array(tablename,'\.'))))))
 FROM outils.get_form_tables_list_from_odata('my_login','my_password','odata_server.mydomaine.org',	5,'Sicen','__system%%2FsubmissionDate','gt','2020-10-01');
-/*
-SELECT * FROM odk_central.form_sicen_submissions_data;
-SELECT * FROM odk_central.form_sicen_emplacements_data;
-SELECT * FROM odk_central.form_sicen_observations_data;
-*/
+
 ```
 
 ## Complete update process from Central
@@ -71,7 +67,7 @@ WHERE prise_image IS NOT NULL;
 SELECT odk_central.formulaire_sicen_alimente_saisie_observation_especes();
 ```
 
-Functions are created in a schema named "outils". Adapt it to your needs.
+Functions are created in a schema named "odk_central". Adapt it to your needs.
 
 ## "Main" functions
 
