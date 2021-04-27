@@ -4,7 +4,8 @@
 
 CREATE OR REPLACE FUNCTION odk_central.feed_data_tables_from_central(
 	schema_name text,	-- the schema where is the table containing plain json submission from the get_submission_from_central() function call
-	table_name text)	-- the table containing plain json submission from the get_submission_from_central() function call
+	table_name text	-- the table containing plain json submission from the get_submission_from_central() function call
+    )
     RETURNS void
     LANGUAGE 'plpgsql'
     COST 100
