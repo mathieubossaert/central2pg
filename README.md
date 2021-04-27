@@ -1,10 +1,9 @@
 # Odata2PG
+## PostgreSQL's functions to retrieve datas from ODK Central's OData API to a PostgreSQL database 
 
 Fonctions pl/pgsql de récupération des données d'ODK central vers une base de données PostgreSQL
 
-PostgreSQL's functions to retrieve datas from ODK Central's OData API to a PostgreSQL database 
-
-Those functions make use of the "COPY FROM PROGRAM" PostgreSQL capability. The program called is curl. TSO curl need to be installed on your database server.
+Those functions make use of the "COPY FROM PROGRAM" PostgreSQL capability. The called program is curl. So curl need to be installed on your database server.
 Security issues are for the moment bypassed with the use of -k function, considering we know the server called by curl.
 
 ## How to use it - Example
