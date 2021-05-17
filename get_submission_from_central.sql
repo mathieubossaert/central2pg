@@ -38,5 +38,5 @@ EXECUTE format ('CREATE UNIQUE INDEX IF NOT EXISTS '||destination_table_name||'_
     ((form_data ->> ''__id''::text) COLLATE pg_catalog."default" ASC NULLS LAST)
     TABLESPACE pg_default;');
 EXECUTE format('INSERT into '||destination_schema_name||'.'||destination_table_name||'(form_data) SELECT json_array_elements(form_data -> ''value'') AS form_data FROM central_json_from_central ON CONFLICT ((form_data ->> ''__id''::text)) DO NOTHING;');
-RAISE NOTICE  '%',requete;
+--RAISE NOTICE  '%',requete;
 END;

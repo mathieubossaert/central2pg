@@ -51,8 +51,6 @@ requete_c = concat('SELECT odk_central.dynamic_pivot('''||requete_a||''',''', re
 			   		MOVE BACKWARD FROM "curseur_central";
 			   		SELECT odk_central.insert_into_from_refcursor('''||schema_name||'.'||table_name||'_data'', ''curseur_central'');
 				   	CLOSE "curseur_central"');
---;
-RAISE NOTICE  '%',requete_c;
 EXECUTE (requete_c);
 END;
 $BODY$;
