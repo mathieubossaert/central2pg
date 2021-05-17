@@ -57,6 +57,3 @@ BEGIN
   OPEN cname FOR execute query;
 END
 $BODY$;
-
-ALTER FUNCTION odk_central.dynamic_pivot(text, text, refcursor)
-    OWNER TO dba;

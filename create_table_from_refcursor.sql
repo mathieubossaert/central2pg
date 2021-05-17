@@ -33,6 +33,3 @@ BEGIN
     EXECUTE (_sql_index);
 END;
 $BODY$;
-
-ALTER FUNCTION odk_central.create_table_from_refcursor(text, refcursor)
-    OWNER TO dba;

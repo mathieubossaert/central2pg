@@ -28,6 +28,3 @@ EXECUTE format('COPY central_media_from_central FROM PROGRAM ''curl -k --user "'
 
 END;
 $BODY$;
-
-ALTER FUNCTION odk_central.get_file_from_central_api(text, text, text, text, text, text, text)
-    OWNER TO dba;

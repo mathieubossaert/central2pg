@@ -30,6 +30,3 @@ FORMAT('WITH data AS (SELECT json_array_elements(form_data -> ''value'') AS form
 	   SELECT '''||email||''' as user_name, '''||password||''' as pass_word, '''||central_domain||''' as central_fqdn, '||project_id||' as project, '''||form_id||''' as form, (form_data ->> ''name'') AS table_name FROM data;');
 END;
 $BODY$;
-
-ALTER FUNCTION odk_central.get_form_tables_list_from_central(text, text, text, integer, text, text, text, text)
-    OWNER TO dba;

@@ -55,6 +55,3 @@ RAISE NOTICE  '%',requete_c;
 EXECUTE (requete_c);
 END;
 $BODY$;
-
-ALTER FUNCTION odk_central.feed_data_tables_from_central(text, text)
-    OWNER TO dba;

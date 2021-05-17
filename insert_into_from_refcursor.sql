@@ -48,6 +48,3 @@ BEGIN
   END IF;
 END;
 $BODY$;
-
-ALTER FUNCTION odk_central.insert_into_from_refcursor(text, refcursor)
-    OWNER TO dba;

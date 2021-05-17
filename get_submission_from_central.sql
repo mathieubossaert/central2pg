@@ -40,7 +40,3 @@ EXECUTE format ('CREATE UNIQUE INDEX IF NOT EXISTS '||destination_table_name||'_
 EXECUTE format('INSERT into '||destination_schema_name||'.'||destination_table_name||'(form_data) SELECT json_array_elements(form_data -> ''value'') AS form_data FROM central_json_from_central ON CONFLICT ((form_data ->> ''__id''::text)) DO NOTHING;');
 RAISE NOTICE  '%',requete;
 END;
-$BODY$;
-
-ALTER FUNCTION odk_central.get_submission_from_central(text, text, text, integer, text, text, text, text, text, text, text)
-    OWNER TO dba;
