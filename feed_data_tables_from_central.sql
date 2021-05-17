@@ -3,8 +3,8 @@
 -- DROP FUNCTION odk_central.feed_data_tables_from_central(text, text);
 
 /* 
-	Should accept a "keys_to_ignore" parameter (for geojson fields we want to keep as geojson.
-	For the moment the function is specific to our naimng convention (point, ligne, polygone)
+	Should accept a "keys_to_ignore" parameter (as for geojson fields we want to keep as geojson).
+	For the moment the function is specific to our naming convention (point, ligne, polygone)
 */
 
 CREATE OR REPLACE FUNCTION odk_central.feed_data_tables_from_central(
@@ -44,10 +44,11 @@ EXECUTE format('
 	)SELECT data_id, key, value FROM doc_key_and_value_recursive WHERE json_typeof(value) <> ''object'' OR key IN (''point'',''ligne'',''polygone'') ORDER BY 2,1;'
 );
 
-requete_a = concat('SELECT data_id, key, value FROM data_table ORDER BY 1,2');
-requete_b = concat('SELECT DISTINCT key FROM data_table ORDER BY 1');
+requete_a = 'SELECT data_id, key, value FROM data_table ORDER BY 1,2';
+requete_b = 'SELECT DISTINCT key FROM data_table ORDER BY 1';
 requete_c = concat('SELECT odk_central.dynamic_pivot('''||requete_a||''',''', requete_b||''',''curseur_central'');
 			   		SELECT odk_central.create_table_from_refcursor('''||schema_name||'.'||table_name||'_data'', ''curseur_central'');
+			   		MOVE BACKWARD FROM "curseur_central";
 			   		SELECT odk_central.insert_into_from_refcursor('''||schema_name||'.'||table_name||'_data'', ''curseur_central'');
 				   	CLOSE "curseur_central"');
 --;

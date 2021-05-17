@@ -9,24 +9,23 @@ Security issues are for the moment bypassed with the use of -k function, conside
 ## How to use it - Example
 
 ```sql
-SELECT outils.get_submission_from_odata(
+SELECT odk_central.get_submission_from_central(
 	user_name,
 	pass_word,
 	central_fqdn,
 	project,
 	form,
 	tablename,
-	false,
-	'__system%%2FsubmissionDate',
+    '__system%%2FsubmissionDate',
 	'gt',
 	'2020-10-01',
 	'odk_central',
-concat('form_',lower(form),'_',lower(split_part(tablename,'.',cardinality(regexp_split_to_array(tablename,'\.')))))
+	concat('form_',lower(form),'_',lower(split_part(tablename,'.',cardinality(regexp_split_to_array(tablename,'\.')))))
 )
-FROM outils.get_form_tables_list_from_odata('my_login','my_password','odata_server.mydomaine.org',	5,'Sicen','__system%%2FsubmissionDate','gt','2020-10-01');
+FROM odk_central.get_form_tables_list_from_central('my_email@address.org','my_passw0rd','central.myserver.org',	4,'Sicen');
 
-SELECT outils.feed_data_tables_from_odata('odk_central',concat('form_',lower(form),'_',lower(split_part(tablename,'.',cardinality(regexp_split_to_array(tablename,'\.'))))))
-FROM outils.get_form_tables_list_from_odata('my_login','my_password','odata_server.mydomaine.org',	5,'Sicen','__system%%2FsubmissionDate','gt','2020-10-01');
+SELECT odk_central.feed_data_tables_from_central('odk_central',concat('form_',lower(form),'_',lower(split_part(tablename,'.',cardinality(regexp_split_to_array(tablename,'\.'))))))
+FROM odk_central.get_form_tables_list_from_central('my_email@address.org','my_passw0rd','central.myserver.org',	4,'Sicen');
 
 ```
 
