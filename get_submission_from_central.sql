@@ -23,21 +23,21 @@ FUNCTION: get_submission_from_central(text, text, text, integer, text, text, tex
 
 	comment : 	
 	future version should use filters... With more parameters
-	Wiating for centra next release (probably May 2021)
+	Waiting for centra next release (probably May 2021)
 */
 
 CREATE OR REPLACE FUNCTION get_submission_from_central(
-	email text,						-- the login (email adress) of a user who can get submissions
-	password text,					-- his password
-	central_domain text, 			-- ODK Central fqdn : central.mydomain.org
-	project_id integer,				-- the Id of the project ex. 4
-	form_id text,					-- the name of the Form ex. Sicen
-	form_table_name text,			-- the table of the form to get value from (one of thoses returned by get_form_tables_list_from_central() function
-	column_to_filter text,			-- the column (__system/submitterId or __system/submissionDate  on wich you want to apply a filter (only works on Submissions table
-	filter text,					-- the filter to apply (gt = greater than, lt = lower than)
-	filter_value text,				-- the value to compare the column with
-	destination_schema_name text, 	-- the name of the schema where to create the permanent table 
-	destination_table_name text		-- the name of this table 
+	email text,						
+	password text,					
+	central_domain text, 			
+	project_id integer,				
+	form_id text,					
+	form_table_name text,			
+	column_to_filter text,			
+	filter text,					
+	filter_value text,				
+	destination_schema_name text, 	
+	destination_table_name text		
 	)
     RETURNS void
     LANGUAGE 'plpgsql'
@@ -62,4 +62,31 @@ EXECUTE format('INSERT into '||destination_schema_name||'.'||destination_table_n
 END;
 $BODY$;
 
+COMMENT ON FUNCTION  get_submission_from_central(
+	text,text,text,integer,text,text,text,text,text,text,text)
+	IS 'description :
+		Get json data from Central, feed a temporary table with a generic name central_json_from_central.
+		Once the temp table is created and filled, PG checks if the destination (permanent) table exists. If not PG creates it with only one json column named "value".
+		PG does the same to check if a unique constraint on the __id exists. This index will be use to ignore subissions already previously inserted in the table, using an "ON CONFLICT xxx DO NOTHING"
+	
+	parameters :
+		email text						-- the login (email adress) of a user who can get submissions
+		password text					-- his password
+		central_domain text 			-- ODK Central fqdn : central.mydomain.org
+		project_id integer				-- the Id of the project ex. 4
+		form_id text					-- the name of the Form ex. Sicen
+		form_table_name text			-- the table of the form to get value from (one of thoses returned by get_form_tables_list_from_central() function
+		column_to_filter text			-- the column (__system/submitterId or __system/submissionDate  on wich you want to apply a filter (only works on Submissions table
+		filter text						-- the filter to apply (gt = greater than, lt = lower than)
+		filter_value text				-- the value to compare the column with
+		destination_schema_name text 	-- the name of the schema where to create the permanent table 
+		destination_table_name text		-- the name of this table 
+	
+	returning :
+		void
 
+	comment : 	
+	future version should use filters... With more parameters
+	Waiting for centra next release (probably May 2021)';
+	
+	

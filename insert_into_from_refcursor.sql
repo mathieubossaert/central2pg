@@ -1,10 +1,11 @@
 /*
-FUNCTION: insert_into_from_refcursor(text, refcursor)	
+FUNCTION: insert_into_from_refcursor(text, text, refcursor)	
 	description :
 	-> adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
 	Feed the table with data
 	
 	parameters :
+	_schema_name text, 		-- the name of the schema where to create the table
 	_table_name text, 		-- the name of the table to create
 	_ref refcursor			-- the name of the refcursor to get data from
 	
@@ -60,5 +61,19 @@ BEGIN
 END;
 $BODY$;
 
-COMMENT ON function insert_into_from_refcursor(text,text,refcursor)IS 'Feed the table with data
+COMMENT ON function insert_into_from_refcursor(text,text,refcursor)IS '	
+	description :
+	-> adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
+	Feed the table with data
+	
+	parameters :
+	_schema_name text, 		-- the name of the schema where to create the table
+	_table_name text, 		-- the name of the table to create
+	_ref refcursor			-- the name of the refcursor to get data from
+	
+	returning :
+	void
+	
 -> is adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381';
+
+

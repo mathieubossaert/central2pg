@@ -1,5 +1,5 @@
 /*
-FUNCTION: get_form_tables_list_from_central(text, text, text, integer, text, text, text, text)
+FUNCTION: get_form_tables_list_from_central(text, text, text, integer, text)
 	description :
 		Returns the lists of "table" composing a form. The "core" one and each one corresponding to each repeat_group.
 	
@@ -15,11 +15,11 @@ FUNCTION: get_form_tables_list_from_central(text, text, text, integer, text, tex
 */
 
 CREATE OR REPLACE FUNCTION get_form_tables_list_from_central(
-	email text,				-- the login (email adress) of a user who can get submissions
-	password text,			-- his password
-	central_domain text, 	-- ODK Central fqdn : central.mydomain.org
-	project_id integer,		-- the Id of the project ex. 4
-	form_id text			-- the name of the Form ex. Sicen
+	email text,				
+	password text,			
+	central_domain text, 	
+	project_id integer,		
+	form_id text			
 	)
     RETURNS TABLE(user_name text, pass_word text, central_fqdn text, project integer, form text, tablename text) 
     LANGUAGE 'plpgsql'
@@ -42,5 +42,18 @@ FORMAT('WITH data AS (SELECT json_array_elements(form_data -> ''value'') AS form
 	   SELECT '''||email||''' as user_name, '''||password||''' as pass_word, '''||central_domain||''' as central_fqdn, '||project_id||' as project, '''||form_id||''' as form, (form_data ->> ''name'') AS table_name FROM data;');
 END;
 $BODY$;
+
+COMMENT ON FUNCTION get_form_tables_list_from_central(text, text, text, integer, text) IS 'description :
+		Returns the lists of "table" composing a form. The "core" one and each one corresponding to each repeat_group.
+	
+	parameters :
+		email text				-- the login (email adress) of a user who can get submissions
+		password text			-- his password
+		central_domain text 	-- ODK Central fqdn : central.mydomain.org
+		project_id integer		-- the Id of the project ex. 4
+		form_id text			-- the name of the Form ex. Sicen
+	
+	returning :
+		TABLE(user_name text, pass_word text, central_fqdn text, project integer, form text, tablename text)';
 
 

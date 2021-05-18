@@ -78,9 +78,22 @@ BEGIN
 END
 $BODY$;
 
+COMMENT ON FUNCTION dynamic_pivot(text, text,refcursor) IS 'description :
+		-> adapted from https://postgresql.verite.pro/blog/2018/06/19/crosstab-pivot.html
+		CREATE a pivot table dynamically, withut specifying mannually the row structure.
+		Returns a cursor use by both following finction to create a table and feed it
+	
+	parameters :
+		central_query text 	-- the query defining the data
+		headers_query text		-- the query defining the columns
+		INOUT cname refcursor	-- the name of the cursor
+	
+	returning :
+		refcursor';
+
 
 /*
-FUNCTION: get_form_tables_list_from_central(text, text, text, integer, text, text, text, text)
+FUNCTION: get_form_tables_list_from_central(text, text, text, integer, text)
 	description :
 		Returns the lists of "table" composing a form. The "core" one and each one corresponding to each repeat_group.
 	
@@ -96,11 +109,11 @@ FUNCTION: get_form_tables_list_from_central(text, text, text, integer, text, tex
 */
 
 CREATE OR REPLACE FUNCTION get_form_tables_list_from_central(
-	email text,				-- the login (email adress) of a user who can get submissions
-	password text,			-- his password
-	central_domain text, 	-- ODK Central fqdn : central.mydomain.org
-	project_id integer,		-- the Id of the project ex. 4
-	form_id text			-- the name of the Form ex. Sicen
+	email text,				
+	password text,			
+	central_domain text, 	
+	project_id integer,		
+	form_id text			
 	)
     RETURNS TABLE(user_name text, pass_word text, central_fqdn text, project integer, form text, tablename text) 
     LANGUAGE 'plpgsql'
@@ -123,6 +136,19 @@ FORMAT('WITH data AS (SELECT json_array_elements(form_data -> ''value'') AS form
 	   SELECT '''||email||''' as user_name, '''||password||''' as pass_word, '''||central_domain||''' as central_fqdn, '||project_id||' as project, '''||form_id||''' as form, (form_data ->> ''name'') AS table_name FROM data;');
 END;
 $BODY$;
+
+COMMENT ON FUNCTION get_form_tables_list_from_central(text, text, text, integer, text) IS 'description :
+		Returns the lists of "table" composing a form. The "core" one and each one corresponding to each repeat_group.
+	
+	parameters :
+		email text				-- the login (email adress) of a user who can get submissions
+		password text			-- his password
+		central_domain text 	-- ODK Central fqdn : central.mydomain.org
+		project_id integer		-- the Id of the project ex. 4
+		form_id text			-- the name of the Form ex. Sicen
+	
+	returning :
+		TABLE(user_name text, pass_word text, central_fqdn text, project integer, form text, tablename text)';
 
 
 /*
@@ -150,21 +176,21 @@ FUNCTION: get_submission_from_central(text, text, text, integer, text, text, tex
 
 	comment : 	
 	future version should use filters... With more parameters
-	Wiating for centra next release (probably May 2021)
+	Waiting for centra next release (probably May 2021)
 */
 
 CREATE OR REPLACE FUNCTION get_submission_from_central(
-	email text,						-- the login (email adress) of a user who can get submissions
-	password text,					-- his password
-	central_domain text, 			-- ODK Central fqdn : central.mydomain.org
-	project_id integer,				-- the Id of the project ex. 4
-	form_id text,					-- the name of the Form ex. Sicen
-	form_table_name text,			-- the table of the form to get value from (one of thoses returned by get_form_tables_list_from_central() function
-	column_to_filter text,			-- the column (__system/submitterId or __system/submissionDate  on wich you want to apply a filter (only works on Submissions table
-	filter text,					-- the filter to apply (gt = greater than, lt = lower than)
-	filter_value text,				-- the value to compare the column with
-	destination_schema_name text, 	-- the name of the schema where to create the permanent table 
-	destination_table_name text		-- the name of this table 
+	email text,						
+	password text,					
+	central_domain text, 			
+	project_id integer,				
+	form_id text,					
+	form_table_name text,			
+	column_to_filter text,			
+	filter text,					
+	filter_value text,				
+	destination_schema_name text, 	
+	destination_table_name text		
 	)
     RETURNS void
     LANGUAGE 'plpgsql'
@@ -189,7 +215,34 @@ EXECUTE format('INSERT into '||destination_schema_name||'.'||destination_table_n
 END;
 $BODY$;
 
+COMMENT ON FUNCTION  get_submission_from_central(
+	text,text,text,integer,text,text,text,text,text,text,text)
+	IS 'description :
+		Get json data from Central, feed a temporary table with a generic name central_json_from_central.
+		Once the temp table is created and filled, PG checks if the destination (permanent) table exists. If not PG creates it with only one json column named "value".
+		PG does the same to check if a unique constraint on the __id exists. This index will be use to ignore subissions already previously inserted in the table, using an "ON CONFLICT xxx DO NOTHING"
+	
+	parameters :
+		email text						-- the login (email adress) of a user who can get submissions
+		password text					-- his password
+		central_domain text 			-- ODK Central fqdn : central.mydomain.org
+		project_id integer				-- the Id of the project ex. 4
+		form_id text					-- the name of the Form ex. Sicen
+		form_table_name text			-- the table of the form to get value from (one of thoses returned by get_form_tables_list_from_central() function
+		column_to_filter text			-- the column (__system/submitterId or __system/submissionDate  on wich you want to apply a filter (only works on Submissions table
+		filter text						-- the filter to apply (gt = greater than, lt = lower than)
+		filter_value text				-- the value to compare the column with
+		destination_schema_name text 	-- the name of the schema where to create the permanent table 
+		destination_table_name text		-- the name of this table 
+	
+	returning :
+		void
 
+	comment : 	
+	future version should use filters... With more parameters
+	Waiting for centra next release (probably May 2021)';
+	
+	
 /*
 FUNCTION: create_table_from_refcursor(text, refcursor)
 	description : 
@@ -236,6 +289,16 @@ BEGIN
     EXECUTE (_sql_index);
 END;
 $BODY$;
+COMMENT ON function create_table_from_refcursor(text,text,refcursor) IS 'description : 
+	-> inspired by https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
+	Create a table corresponding to the curso structure (attribute types and names)
+	
+	parameters :
+	_table_name text 		-- the name of the table to create
+	_ref refcursor			-- the name of the refcursor to get data from
+	
+	returning :
+	void';
 
 
 /*
@@ -302,14 +365,29 @@ EXECUTE (requete_c);
 END;
 $BODY$;
 
+COMMENT ON FUNCTION feed_data_tables_from_central(text,text)
+IS 'description : 
+		Feed the tables from key/pair tables. 
+	parameters :
+		schema_name text	-- the schema where is the table containing plain json submission from the get_submission_from_central() function call
+		table_name text		-- the table containing plain json submission from the get_submission_from_central() function call
+	
+	returning :
+		void
+		
+	comment :
+		Should accept a "keys_to_ignore" parameter (as for geojson fields we want to keep as geojson).
+		For the moment the function is specific to our naming convention (point, ligne, polygone)';
+
 
 /*
-FUNCTION: insert_into_from_refcursor(text, refcursor)	
+FUNCTION: insert_into_from_refcursor(text, text, refcursor)	
 	description :
 	-> adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
 	Feed the table with data
 	
 	parameters :
+	_schema_name text, 		-- the name of the schema where to create the table
 	_table_name text, 		-- the name of the table to create
 	_ref refcursor			-- the name of the refcursor to get data from
 	
@@ -365,10 +443,24 @@ BEGIN
 END;
 $BODY$;
 
-COMMENT ON function insert_into_from_refcursor(text,text,refcursor)IS 'Feed the table with data
+COMMENT ON function insert_into_from_refcursor(text,text,refcursor)IS '	
+	description :
+	-> adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
+	Feed the table with data
+	
+	parameters :
+	_schema_name text, 		-- the name of the schema where to create the table
+	_table_name text, 		-- the name of the table to create
+	_ref refcursor			-- the name of the refcursor to get data from
+	
+	returning :
+	void
+	
 -> is adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381';
+
+
 /*
-FUNCTION: get_file_from_central_api(text, text, text, text, text, text, text)
+FUNCTION: get_file_from_central_api(text, text, text, integer, text, text, text, text, text)
 	description :
 		Download each media mentioned in submissions
 	
@@ -388,15 +480,15 @@ FUNCTION: get_file_from_central_api(text, text, text, text, text, text, text)
 */
 
 CREATE OR REPLACE FUNCTION get_file_from_central_api(
-	email text,				-- the login (email adress) of a user who can get submissions
-	password text,			-- his password
-	central_domain text, 	-- ODK Central fqdn : central.mydomain.org
-	project_id integer,		-- the Id of the project ex. 4
-	form_id text,			-- the name of the Form ex. Sicen
-	submission_id text,
-	image text,				-- the image name mentionned in the submission ex. 1611941389030.jpg
-	destination text,		-- Where you want curl to store the file (path to directory)
-	output text				-- filename with extension
+	email text,				
+	password text,			
+	central_domain text, 	
+	project_id integer,		
+	form_id text,			
+	submission_id text,     
+	image text,				
+	destination text,		
+	output text				
 	)
     RETURNS void
     LANGUAGE 'plpgsql'
@@ -409,9 +501,24 @@ url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form
 EXECUTE format('DROP TABLE IF EXISTS central_media_from_central;');
 EXECUTE format('CREATE TEMP TABLE central_media_from_central(reponse text);');
 EXECUTE format('COPY central_media_from_central FROM PROGRAM ''curl -k --user "'||email||':'||password||'" -o '||destination||'/'||output||' "'||url||'"'';');
---curl --user "email:password" -o /home/postgres/medias_odk/fdsfdsu_1611941389030.jpg "https://central.mydomain.org/v1/projects/3/forms/Sicen/Submissions/uuid:5de3ee7b-8f3b-4b80-9dcb-e4cbc1ec7239/attachments/1611941389030.jpg"
-
 END;
 $BODY$;
 
-
+COMMENT ON FUNCTION get_file_from_central_api(text, text, text, integer, text, text, text, text, text) IS 'description :
+		Download each media mentioned in submissions
+	
+	parameters :
+		email text				-- the login (email adress) of a user who can get submissions
+		password text			-- his password
+		central_domain text 	-- ODK Central fqdn : central.mydomain.org
+		project_id integer		-- the Id of the project ex. 4
+		form_id text			-- the name of the Form ex. Sicen
+		submission_id text
+		image text				-- the image name mentionned in the submission ex. 1611941389030.jpg
+		destination text		-- Where you want curl to store the file (path to directory)
+		output text				-- filename with extension
+	
+	returning :
+		void';
+	
+	

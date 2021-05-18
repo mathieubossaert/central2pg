@@ -70,4 +70,17 @@ BEGIN
 END
 $BODY$;
 
+COMMENT ON FUNCTION dynamic_pivot(text, text,refcursor) IS 'description :
+		-> adapted from https://postgresql.verite.pro/blog/2018/06/19/crosstab-pivot.html
+		CREATE a pivot table dynamically, withut specifying mannually the row structure.
+		Returns a cursor use by both following finction to create a table and feed it
+	
+	parameters :
+		central_query text 	-- the query defining the data
+		headers_query text		-- the query defining the columns
+		INOUT cname refcursor	-- the name of the cursor
+	
+	returning :
+		refcursor';
+
 

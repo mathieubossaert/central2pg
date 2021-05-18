@@ -147,7 +147,7 @@ Download each media mentioned in submissions
 CREATE a pivot table dynamically, withut specifying mannually the row structure.
 Returns a cursor use by both following finction to create a table and feed it
 #### parameters : 
-	central_query text 	-- the query defining the data
+	central_query text 		-- the query defining the data
 	headers_query text		-- the query defining the columns
 	INOUT cname refcursor	-- the name of the cursor
 #### returning : 
@@ -157,6 +157,7 @@ Returns a cursor use by both following finction to create a table and feed it
 -> inspired by https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
 Create a table corresponding to the curso structure (attribute types and names)
 #### parameters : 
+	_schema_name text 		-- the name of the table to create 
 	_table_name text 		-- the name of the table to create
 	_ref refcursor			-- the name of the refcursor to get data from
 #### returning : 
@@ -166,6 +167,7 @@ Create a table corresponding to the curso structure (attribute types and names)
 -> adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
 Feed the table with data
 #### parameters : 
+	_schema_name text 		-- the name of the table to create 
 	_table_name text, 		-- the name of the table to create
 	_ref refcursor			-- the name of the refcursor to get data from
 #### returning : 

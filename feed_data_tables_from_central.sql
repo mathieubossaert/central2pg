@@ -62,4 +62,18 @@ EXECUTE (requete_c);
 END;
 $BODY$;
 
+COMMENT ON FUNCTION feed_data_tables_from_central(text,text)
+IS 'description : 
+		Feed the tables from key/pair tables. 
+	parameters :
+		schema_name text	-- the schema where is the table containing plain json submission from the get_submission_from_central() function call
+		table_name text		-- the table containing plain json submission from the get_submission_from_central() function call
+	
+	returning :
+		void
+		
+	comment :
+		Should accept a "keys_to_ignore" parameter (as for geojson fields we want to keep as geojson).
+		For the moment the function is specific to our naming convention (point, ligne, polygone)';
+
 
