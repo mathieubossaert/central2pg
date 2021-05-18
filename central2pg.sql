@@ -1,5 +1,13 @@
 /*
-FUNCTION: odk_central.dynamic_pivot(text, text, refcursor)
+   change schema name odk_central
+   on two firts lines to what you want
+*/
+CREATE SCHEMA IF NOT EXISTS odk_central;
+SET SEARCH_PATH TO odk_central;
+
+
+/*
+FUNCTION: dynamic_pivot(text, text, refcursor)
 	description :
 		-> adapted from https://postgresql.verite.pro/blog/2018/06/19/crosstab-pivot.html
 		CREATE a pivot table dynamically, withut specifying mannually the row structure.
@@ -14,7 +22,7 @@ FUNCTION: odk_central.dynamic_pivot(text, text, refcursor)
 		refcursor
 */
 
-CREATE OR REPLACE FUNCTION odk_central.dynamic_pivot(
+CREATE OR REPLACE FUNCTION dynamic_pivot(
 	central_query text,
 	headers_query text,
 	INOUT cname refcursor DEFAULT NULL::refcursor)
@@ -72,7 +80,7 @@ $BODY$;
 
 
 /*
-FUNCTION: odk_central.get_form_tables_list_from_central(text, text, text, integer, text, text, text, text)
+FUNCTION: get_form_tables_list_from_central(text, text, text, integer, text, text, text, text)
 	description :
 		Returns the lists of "table" composing a form. The "core" one and each one corresponding to each repeat_group.
 	
@@ -87,7 +95,7 @@ FUNCTION: odk_central.get_form_tables_list_from_central(text, text, text, intege
 		TABLE(user_name text, pass_word text, central_fqdn text, project integer, form text, tablename text)
 */
 
-CREATE OR REPLACE FUNCTION odk_central.get_form_tables_list_from_central(
+CREATE OR REPLACE FUNCTION get_form_tables_list_from_central(
 	email text,				-- the login (email adress) of a user who can get submissions
 	password text,			-- his password
 	central_domain text, 	-- ODK Central fqdn : central.mydomain.org
@@ -118,7 +126,7 @@ $BODY$;
 
 
 /*
-FUNCTION: odk_central.get_submission_from_central(text, text, text, integer, text, text, text, text, text, text, text)
+FUNCTION: get_submission_from_central(text, text, text, integer, text, text, text, text, text, text, text)
 	description
 		Get json data from Central, feed a temporary table with a generic name central_json_from_central.
 		Once the temp table is created and filled, PG checks if the destination (permanent) table exists. If not PG creates it with only one json column named "value".
@@ -145,7 +153,7 @@ FUNCTION: odk_central.get_submission_from_central(text, text, text, integer, tex
 	Wiating for centra next release (probably May 2021)
 */
 
-CREATE OR REPLACE FUNCTION odk_central.get_submission_from_central(
+CREATE OR REPLACE FUNCTION get_submission_from_central(
 	email text,						-- the login (email adress) of a user who can get submissions
 	password text,					-- his password
 	central_domain text, 			-- ODK Central fqdn : central.mydomain.org
@@ -183,7 +191,7 @@ $BODY$;
 
 
 /*
-FUNCTION: odk_central.create_table_from_refcursor(text, refcursor)
+FUNCTION: create_table_from_refcursor(text, refcursor)
 	description : 
 	-> inspired by https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
 	Create a table corresponding to the curso structure (attribute types and names)
@@ -196,7 +204,7 @@ FUNCTION: odk_central.create_table_from_refcursor(text, refcursor)
 	void
 */
 
-CREATE OR REPLACE FUNCTION odk_central.create_table_from_refcursor(
+CREATE OR REPLACE FUNCTION create_table_from_refcursor(
 	_schema_name text,
 	_table_name text,
 	_ref refcursor)
@@ -231,7 +239,7 @@ $BODY$;
 
 
 /*
-FUNCTION: odk_central.feed_data_tables_from_central(text, text)
+FUNCTION: feed_data_tables_from_central(text, text)
 	description : 
 		Feed the tables from key/pair tables. 
 	parameters :
@@ -246,7 +254,7 @@ FUNCTION: odk_central.feed_data_tables_from_central(text, text)
 		For the moment the function is specific to our naming convention (point, ligne, polygone)
 */
 
-CREATE OR REPLACE FUNCTION odk_central.feed_data_tables_from_central(
+CREATE OR REPLACE FUNCTION feed_data_tables_from_central(
 	schema_name text,	-- the schema where is the table containing plain json submission from the get_submission_from_central() function call
 	table_name text	-- the table containing plain json submission from the get_submission_from_central() function call
     )
@@ -285,18 +293,18 @@ EXECUTE format('
 
 requete_a = 'SELECT data_id, key, value FROM data_table ORDER BY 1,2';
 requete_b = 'SELECT DISTINCT key FROM data_table ORDER BY 1';
-requete_c = concat('SELECT odk_central.dynamic_pivot(''',requete_a,''',''', requete_b,''',''curseur_central'');
-			   		SELECT odk_central.create_table_from_refcursor(''',schema_name,''',''',table_name,'_data'', ''curseur_central'');
+requete_c = concat('SELECT dynamic_pivot(''',requete_a,''',''', requete_b,''',''curseur_central'');
+			   		SELECT create_table_from_refcursor(''',schema_name,''',''',table_name,'_data'', ''curseur_central'');
 			   		MOVE BACKWARD FROM "curseur_central";
-			   		SELECT odk_central.insert_into_from_refcursor(''',schema_name,''',''',table_name,'_data'', ''curseur_central'');
+			   		SELECT insert_into_from_refcursor(''',schema_name,''',''',table_name,'_data'', ''curseur_central'');
 				   	CLOSE "curseur_central"');
 EXECUTE (requete_c);
 END;
-$BODY
+$BODY$;
 
 
 /*
-FUNCTION: odk_central.insert_into_from_refcursor(text, refcursor)	
+FUNCTION: insert_into_from_refcursor(text, refcursor)	
 	description :
 	-> adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
 	Feed the table with data
@@ -309,7 +317,7 @@ FUNCTION: odk_central.insert_into_from_refcursor(text, refcursor)
 	void
 */
 
-CREATE OR REPLACE FUNCTION odk_central.insert_into_from_refcursor(
+CREATE OR REPLACE FUNCTION insert_into_from_refcursor(
 	_schema_name text,
 	_table_name text,
 	_ref refcursor)
@@ -357,10 +365,10 @@ BEGIN
 END;
 $BODY$;
 
-COMMENT ON function odk_central.insert_into_from_refcursor(text,text,refcursor)IS 'Feed the table with data
--> is adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381'
+COMMENT ON function insert_into_from_refcursor(text,text,refcursor)IS 'Feed the table with data
+-> is adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381';
 /*
-FUNCTION: odk_central.get_file_from_central_api(text, text, text, text, text, text, text)
+FUNCTION: get_file_from_central_api(text, text, text, text, text, text, text)
 	description :
 		Download each media mentioned in submissions
 	
@@ -379,7 +387,7 @@ FUNCTION: odk_central.get_file_from_central_api(text, text, text, text, text, te
 		void
 */
 
-CREATE OR REPLACE FUNCTION odk_central.get_file_from_central_api(
+CREATE OR REPLACE FUNCTION get_file_from_central_api(
 	email text,				-- the login (email adress) of a user who can get submissions
 	password text,			-- his password
 	central_domain text, 	-- ODK Central fqdn : central.mydomain.org

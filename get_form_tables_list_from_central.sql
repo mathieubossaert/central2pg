@@ -1,5 +1,5 @@
 /*
-FUNCTION: odk_central.get_form_tables_list_from_central(text, text, text, integer, text, text, text, text)
+FUNCTION: get_form_tables_list_from_central(text, text, text, integer, text, text, text, text)
 	description :
 		Returns the lists of "table" composing a form. The "core" one and each one corresponding to each repeat_group.
 	
@@ -14,7 +14,7 @@ FUNCTION: odk_central.get_form_tables_list_from_central(text, text, text, intege
 		TABLE(user_name text, pass_word text, central_fqdn text, project integer, form text, tablename text)
 */
 
-CREATE OR REPLACE FUNCTION odk_central.get_form_tables_list_from_central(
+CREATE OR REPLACE FUNCTION get_form_tables_list_from_central(
 	email text,				-- the login (email adress) of a user who can get submissions
 	password text,			-- his password
 	central_domain text, 	-- ODK Central fqdn : central.mydomain.org

@@ -1,5 +1,5 @@
 /*
-FUNCTION: odk_central.get_submission_from_central(text, text, text, integer, text, text, text, text, text, text, text)
+FUNCTION: get_submission_from_central(text, text, text, integer, text, text, text, text, text, text, text)
 	description
 		Get json data from Central, feed a temporary table with a generic name central_json_from_central.
 		Once the temp table is created and filled, PG checks if the destination (permanent) table exists. If not PG creates it with only one json column named "value".
@@ -26,7 +26,7 @@ FUNCTION: odk_central.get_submission_from_central(text, text, text, integer, tex
 	Wiating for centra next release (probably May 2021)
 */
 
-CREATE OR REPLACE FUNCTION odk_central.get_submission_from_central(
+CREATE OR REPLACE FUNCTION get_submission_from_central(
 	email text,						-- the login (email adress) of a user who can get submissions
 	password text,					-- his password
 	central_domain text, 			-- ODK Central fqdn : central.mydomain.org

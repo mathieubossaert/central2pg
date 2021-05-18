@@ -1,5 +1,5 @@
 /*
-FUNCTION: odk_central.get_file_from_central_api(text, text, text, text, text, text, text)
+FUNCTION: get_file_from_central_api(text, text, text, text, text, text, text)
 	description :
 		Download each media mentioned in submissions
 	
@@ -18,7 +18,7 @@ FUNCTION: odk_central.get_file_from_central_api(text, text, text, text, text, te
 		void
 */
 
-CREATE OR REPLACE FUNCTION odk_central.get_file_from_central_api(
+CREATE OR REPLACE FUNCTION get_file_from_central_api(
 	email text,				-- the login (email adress) of a user who can get submissions
 	password text,			-- his password
 	central_domain text, 	-- ODK Central fqdn : central.mydomain.org

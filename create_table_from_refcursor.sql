@@ -1,5 +1,5 @@
 /*
-FUNCTION: odk_central.create_table_from_refcursor(text, refcursor)
+FUNCTION: create_table_from_refcursor(text, refcursor)
 	description : 
 	-> inspired by https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
 	Create a table corresponding to the curso structure (attribute types and names)
@@ -12,7 +12,7 @@ FUNCTION: odk_central.create_table_from_refcursor(text, refcursor)
 	void
 */
 
-CREATE OR REPLACE FUNCTION odk_central.create_table_from_refcursor(
+CREATE OR REPLACE FUNCTION create_table_from_refcursor(
 	_schema_name text,
 	_table_name text,
 	_ref refcursor)
