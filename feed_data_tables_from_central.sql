@@ -1,10 +1,17 @@
--- FUNCTION: odk_central.feed_data_tables_from_central(text, text)
-
--- DROP FUNCTION odk_central.feed_data_tables_from_central(text, text);
-
-/* 
-	Should accept a "keys_to_ignore" parameter (as for geojson fields we want to keep as geojson).
-	For the moment the function is specific to our naming convention (point, ligne, polygone)
+/*
+FUNCTION: odk_central.feed_data_tables_from_central(text, text)
+	description : 
+		Feed the tables from key/pair tables. 
+	parameters :
+		schema_name text	-- the schema where is the table containing plain json submission from the get_submission_from_central() function call
+		table_name text		-- the table containing plain json submission from the get_submission_from_central() function call
+	
+	returning :
+		void
+		
+	comment :
+		Should accept a "keys_to_ignore" parameter (as for geojson fields we want to keep as geojson).
+		For the moment the function is specific to our naming convention (point, ligne, polygone)
 */
 
 CREATE OR REPLACE FUNCTION odk_central.feed_data_tables_from_central(
@@ -46,11 +53,13 @@ EXECUTE format('
 
 requete_a = 'SELECT data_id, key, value FROM data_table ORDER BY 1,2';
 requete_b = 'SELECT DISTINCT key FROM data_table ORDER BY 1';
-requete_c = concat('SELECT odk_central.dynamic_pivot('''||requete_a||''',''', requete_b||''',''curseur_central'');
-			   		SELECT odk_central.create_table_from_refcursor('''||schema_name||'.'||table_name||'_data'', ''curseur_central'');
+requete_c = concat('SELECT odk_central.dynamic_pivot(''',requete_a,''',''', requete_b,''',''curseur_central'');
+			   		SELECT odk_central.create_table_from_refcursor(''',schema_name,''',''',table_name,'_data'', ''curseur_central'');
 			   		MOVE BACKWARD FROM "curseur_central";
-			   		SELECT odk_central.insert_into_from_refcursor('''||schema_name||'.'||table_name||'_data'', ''curseur_central'');
+			   		SELECT odk_central.insert_into_from_refcursor(''',schema_name,''',''',table_name,'_data'', ''curseur_central'');
 				   	CLOSE "curseur_central"');
 EXECUTE (requete_c);
 END;
-$BODY$;
+$BODY
+
+

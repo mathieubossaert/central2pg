@@ -1,9 +1,30 @@
--- FUNCTION: odk_central.get_submission_from_central(text, text, text, integer, text, text, text, text, text, text, text)
-/* 
-	futurer version should use filters... With more parameters
+/*
+FUNCTION: odk_central.get_submission_from_central(text, text, text, integer, text, text, text, text, text, text, text)
+	description
+		Get json data from Central, feed a temporary table with a generic name central_json_from_central.
+		Once the temp table is created and filled, PG checks if the destination (permanent) table exists. If not PG creates it with only one json column named "value".
+		PG does the same to check if a unique constraint on the __id exists. This index will be use to ignore subissions already previously inserted in the table, using an "ON CONFLICT xxx DO NOTHING"
+	
+	parameters :
+		email text						-- the login (email adress) of a user who can get submissions
+		password text					-- his password
+		central_domain text 			-- ODK Central fqdn : central.mydomain.org
+		project_id integer				-- the Id of the project ex. 4
+		form_id text					-- the name of the Form ex. Sicen
+		form_table_name text			-- the table of the form to get value from (one of thoses returned by get_form_tables_list_from_central() function
+		column_to_filter text			-- the column (__system/submitterId or __system/submissionDate  on wich you want to apply a filter (only works on Submissions table
+		filter text						-- the filter to apply (gt = greater than, lt = lower than)
+		filter_value text				-- the value to compare the column with
+		destination_schema_name text 	-- the name of the schema where to create the permanent table 
+		destination_table_name text		-- the name of this table 
+	
+	returning :
+		void
 
+	comment : 	
+	future version should use filters... With more parameters
+	Wiating for centra next release (probably May 2021)
 */
--- DROP FUNCTION odk_central.get_submission_from_central(text, text, text, integer, text, text, text, text, text, text, text);
 
 CREATE OR REPLACE FUNCTION odk_central.get_submission_from_central(
 	email text,						-- the login (email adress) of a user who can get submissions
@@ -38,5 +59,7 @@ EXECUTE format ('CREATE UNIQUE INDEX IF NOT EXISTS '||destination_table_name||'_
     ((form_data ->> ''__id''::text) COLLATE pg_catalog."default" ASC NULLS LAST)
     TABLESPACE pg_default;');
 EXECUTE format('INSERT into '||destination_schema_name||'.'||destination_table_name||'(form_data) SELECT json_array_elements(form_data -> ''value'') AS form_data FROM central_json_from_central ON CONFLICT ((form_data ->> ''__id''::text)) DO NOTHING;');
---RAISE NOTICE  '%',requete;
 END;
+$BODY$;
+
+

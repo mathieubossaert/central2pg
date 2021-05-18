@@ -1,6 +1,22 @@
--- FUNCTION: odk_central.get_file_from_central_api(text, text, text, text, text, text, text)
-
--- DROP FUNCTION odk_central.get_file_from_central_api(text, text, text, text, text, text, text);
+/*
+FUNCTION: odk_central.get_file_from_central_api(text, text, text, text, text, text, text)
+	description :
+		Download each media mentioned in submissions
+	
+	parameters :
+		email text				-- the login (email adress) of a user who can get submissions
+		password text			-- his password
+		central_domain text 	-- ODK Central fqdn : central.mydomain.org
+		project_id integer		-- the Id of the project ex. 4
+		form_id text			-- the name of the Form ex. Sicen
+		submission_id text
+		image text				-- the image name mentionned in the submission ex. 1611941389030.jpg
+		destination text		-- Where you want curl to store the file (path to directory)
+		output text				-- filename with extension
+	
+	returning :
+		void
+*/
 
 CREATE OR REPLACE FUNCTION odk_central.get_file_from_central_api(
 	email text,				-- the login (email adress) of a user who can get submissions
@@ -28,3 +44,5 @@ EXECUTE format('COPY central_media_from_central FROM PROGRAM ''curl -k --user "'
 
 END;
 $BODY$;
+
+

@@ -118,6 +118,7 @@ PG does the same to check if a unique constraint on the \_\_id exists. This inde
 	void
 ### feed_data_tables_from_central.sql
 #### description
+	Feed the tables from key/pair tables.
 #### parameters :
 	schema_name text	-- the schema where is the table containing plain json submission from the get_submission_from_central() function call
 	table_name text	-- the table containing plain json submission from the get_submission_from_central() function call

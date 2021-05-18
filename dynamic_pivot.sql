@@ -1,6 +1,18 @@
--- FUNCTION: odk_central.dynamic_pivot(text, text, refcursor)
-
--- DROP FUNCTION odk_central.dynamic_pivot(text, text, refcursor);
+/*
+FUNCTION: odk_central.dynamic_pivot(text, text, refcursor)
+	description :
+		-> adapted from https://postgresql.verite.pro/blog/2018/06/19/crosstab-pivot.html
+		CREATE a pivot table dynamically, withut specifying mannually the row structure.
+		Returns a cursor use by both following finction to create a table and feed it
+	
+	parameters :
+		central_query text 	-- the query defining the data
+		headers_query text		-- the query defining the columns
+		INOUT cname refcursor	-- the name of the cursor
+	
+	returning :
+		refcursor
+*/
 
 CREATE OR REPLACE FUNCTION odk_central.dynamic_pivot(
 	central_query text,
@@ -57,3 +69,5 @@ BEGIN
   OPEN cname FOR execute query;
 END
 $BODY$;
+
+

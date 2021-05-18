@@ -1,8 +1,19 @@
--- FUNCTION: odk_central.insert_into_from_refcursor(text, refcursor)
-
--- DROP FUNCTION odk_central.insert_into_from_refcursor(text, refcursor);
+/*
+FUNCTION: odk_central.insert_into_from_refcursor(text, refcursor)	
+	description :
+	-> adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
+	Feed the table with data
+	
+	parameters :
+	_table_name text, 		-- the name of the table to create
+	_ref refcursor			-- the name of the refcursor to get data from
+	
+	returning :
+	void
+*/
 
 CREATE OR REPLACE FUNCTION odk_central.insert_into_from_refcursor(
+	_schema_name text,
 	_table_name text,
 	_ref refcursor)
     RETURNS void
@@ -40,7 +51,7 @@ BEGIN
 
   _sql_val = TRIM(TRAILING ',' FROM _sql_val);
   _sql = '
-          INSERT INTO ' || _table_name || '
+          INSERT INTO ' || _schema_name || '.' || _table_name || '
           VALUES ' || _sql_val ||' ON CONFLICT (data_id) DO NOTHING;';
   --RAISE NOTICE 'insert_into_from_refcursor(): SQL is: %', _sql;
   IF _hasvalues THEN    --to avoid error when trying to insert 0 values
@@ -48,3 +59,6 @@ BEGIN
   END IF;
 END;
 $BODY$;
+
+COMMENT ON function odk_central.insert_into_from_refcursor(text,text,refcursor)IS 'Feed the table with data
+-> is adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381'
