@@ -25,6 +25,7 @@ AS $BODY$
 DECLARE
   _sql       text;
   _sql_val   text = '';
+  _sql_col   text = '';
   _row       record;
   _hasvalues boolean = FALSE;
 BEGIN
@@ -32,8 +33,6 @@ BEGIN
   LOOP   --for each row
     FETCH _ref INTO _row;
     EXIT WHEN NOT found;   --there are no rows more
-
-    _hasvalues = TRUE;
 
     SELECT _sql_val || '
            (' ||
@@ -44,20 +43,28 @@ BEGIN
 				   ELSE 
 				   concat('''',replace(trim(val.value :: text,'\"'),'''',''''''),'''')
 				   END)
-			   , ',') ||
+			   , ',' ORDER BY val.key) ||
            '),'
         INTO _sql_val
     FROM JSON_EACH(TO_JSON(_row)) val;
-  END LOOP;
+
+    SELECT _sql_col || STRING_AGG(concat('"',val.key :: text,'"'), ',' ORDER BY val.key) 
+        INTO _sql_col
+    FROM JSON_EACH(TO_JSON(_row)) val;
 
   _sql_val = TRIM(TRAILING ',' FROM _sql_val);
+  _sql_col = TRIM(TRAILING ',' FROM _sql_col);
   _sql = '
-          INSERT INTO ' || _schema_name || '.' || _table_name || '
+          INSERT INTO ' || _schema_name || '.' || _table_name || '(' || _sql_col || ')
           VALUES ' || _sql_val ||' ON CONFLICT (data_id) DO NOTHING;';
+	
+	EXECUTE (_sql);
+	_sql_val = '';
+	_sql_col = '';
+  END LOOP;
+  
   --RAISE NOTICE 'insert_into_from_refcursor(): SQL is: %', _sql;
-  IF _hasvalues THEN    --to avoid error when trying to insert 0 values
-    EXECUTE (_sql);
-  END IF;
+
 END;
 $BODY$;
 
