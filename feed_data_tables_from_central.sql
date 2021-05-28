@@ -26,11 +26,10 @@ CREATE OR REPLACE FUNCTION feed_data_tables_from_central(
     COST 100
     VOLATILE PARALLEL UNSAFE
 AS $BODY$
-declare query_a text;
-declare query_b text;
-declare query_c text;
-declare columns_list text;
+--declare keys_to_ignore text;
 BEGIN
+
+RAISE INFO 'entering feed_data_tables_from_central for table %', table_name; 
 EXECUTE format('SET search_path=odk_central;
 	DROP TABLE IF EXISTS data_table;
 	CREATE TABLE data_table(data_id text, key text, value json);
@@ -48,20 +47,20 @@ EXECUTE format('SET search_path=odk_central;
 		t.value
 	  FROM doc_key_and_value_recursive,
 		json_each(CASE 
-		  WHEN json_typeof(doc_key_and_value_recursive.value) <> ''object'' OR key IN (''point'',''ligne'',''polygone'') THEN ''{}'' :: JSON
+		  WHEN json_typeof(doc_key_and_value_recursive.value) <> ''object'' OR key IN (''geopoint_widget_placementmap'',''point'',''ligne'',''polygone'') THEN ''{}'' :: JSON
 		  ELSE doc_key_and_value_recursive.value
 		END) AS t
-	)SELECT data_id, key, value FROM doc_key_and_value_recursive WHERE json_typeof(value) <> ''object'' OR key IN (''point'',''ligne'',''polygone'') ORDER BY 2,1;'
+	)SELECT data_id, key, value FROM doc_key_and_value_recursive WHERE json_typeof(value) <> ''object'' OR key IN (''geopoint_widget_placementmap'',''point'',''ligne'',''polygone'') ORDER BY 2,1;'
 );
-
-query_a = 'SELECT data_id, key, value FROM data_table ORDER BY 1,2';
-query_b = 'SELECT DISTINCT key FROM data_table ORDER BY 1';
-query_c = concat('SELECT dynamic_pivot(''',query_a,''',''', query_b,''',''curseur_central'');
-			   		SELECT create_table_from_refcursor(''',schema_name,''',''',table_name,'_data'', ''curseur_central'');
+				
+EXECUTE format('SELECT dynamic_pivot(''SELECT data_id, key, value FROM data_table ORDER BY 1,2'',''SELECT DISTINCT key FROM data_table ORDER BY 1'',''curseur_central'');
+			   		SELECT create_table_from_refcursor('''||schema_name||''','''||table_name||'_data'', ''curseur_central'');
 			   		MOVE BACKWARD FROM "curseur_central";
-			   		SELECT insert_into_from_refcursor(''',schema_name,''',''',table_name,'_data'', ''curseur_central'');
-				   	CLOSE "curseur_central"');
-EXECUTE (query_c);
+			   		SELECT insert_into_from_refcursor('''||schema_name||''','''||table_name||'_data'', ''curseur_central'');
+				   	CLOSE "curseur_central"'
+			  );	
+RAISE INFO 'exiting from feed_data_tables_from_central for table %', table_name; 
+
 END;
 $BODY$;
 
