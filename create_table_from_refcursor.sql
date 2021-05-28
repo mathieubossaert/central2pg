@@ -25,8 +25,11 @@ DECLARE
   _sql       text;
   _sql_index       text;
   _sql_val   text = '';
+  _sql_existing_cols   text = '';
+  _sql_new_cols   text = '';
   _row       record;
 BEGIN
+ RAISE INFO 'entering create_table_from_refcursor() for table %',_table_name; 
     FETCH FIRST FROM _ref INTO _row;
     SELECT _sql_val || '
            (' ||
@@ -42,6 +45,22 @@ BEGIN
     ON '||_schema_name||'.'||_table_name||' USING btree (data_id)
     TABLESPACE pg_default;';
     EXECUTE (_sql_index);
+	
+	/* ading new columns */
+	SELECT _sql_new_cols || 
+           STRING_AGG(concat('ALTER TABLE ' , _schema_name ,'.', _table_name , ' ADD COLUMN "',val.key :: text,'" text'), ';') ||';'
+        INTO _sql_new_cols
+    FROM JSON_EACH(TO_JSON(_row)) val
+	WHERE val.key NOT IN ( SELECT attname 
+ FROM pg_class JOIN pg_attribute ON pg_attribute.attrelid=pg_class.oid
+ JOIN pg_namespace ON relnamespace = pg_namespace.oid
+ WHERE nspname = _schema_name
+   AND relkind = 'r' AND pg_class.relname = _table_name AND attnum > 0 AND attname = val.key
+);
+	-- Create new attributes or Run a dummy query if nothing new
+    EXECUTE (COALESCE(_sql_new_cols,'SELECT true;')); 
+ RAISE INFO 'exiting from  create_table_from_refcursor() for table %',_table_name; 
+ RAISE INFO 'create_table_from_refcursor(): SQL statement is: %', COALESCE(_sql_new_cols,'no new column to add');
 END;
 $BODY$;
 COMMENT ON function create_table_from_refcursor(text,text,refcursor) IS 'description : 
