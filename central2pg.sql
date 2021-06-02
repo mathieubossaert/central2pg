@@ -271,8 +271,11 @@ DECLARE
   _sql       text;
   _sql_index       text;
   _sql_val   text = '';
+  _sql_existing_cols   text = '';
+  _sql_new_cols   text = '';
   _row       record;
 BEGIN
+ RAISE INFO 'entering create_table_from_refcursor() for table %',_table_name; 
     FETCH FIRST FROM _ref INTO _row;
     SELECT _sql_val || '
            (' ||
@@ -288,6 +291,22 @@ BEGIN
     ON '||_schema_name||'.'||_table_name||' USING btree (data_id)
     TABLESPACE pg_default;';
     EXECUTE (_sql_index);
+	
+	/* ading new columns */
+	SELECT _sql_new_cols || 
+           STRING_AGG(concat('ALTER TABLE ' , _schema_name ,'.', _table_name , ' ADD COLUMN "',val.key :: text,'" text'), ';') ||';'
+        INTO _sql_new_cols
+    FROM JSON_EACH(TO_JSON(_row)) val
+	WHERE val.key NOT IN ( SELECT attname 
+ FROM pg_class JOIN pg_attribute ON pg_attribute.attrelid=pg_class.oid
+ JOIN pg_namespace ON relnamespace = pg_namespace.oid
+ WHERE nspname = _schema_name
+   AND relkind = 'r' AND pg_class.relname = _table_name AND attnum > 0 AND attname = val.key
+);
+	-- Create new attributes or Run a dummy query if nothing new
+    EXECUTE (COALESCE(_sql_new_cols,'SELECT true;')); 
+ RAISE INFO 'exiting from  create_table_from_refcursor() for table %',_table_name; 
+ RAISE INFO 'create_table_from_refcursor(): SQL statement is: %', COALESCE(_sql_new_cols,'no new column to add');
 END;
 $BODY$;
 COMMENT ON function create_table_from_refcursor(text,text,refcursor) IS 'description : 
@@ -330,11 +349,10 @@ CREATE OR REPLACE FUNCTION feed_data_tables_from_central(
     COST 100
     VOLATILE PARALLEL UNSAFE
 AS $BODY$
-declare query_a text;
-declare query_b text;
-declare query_c text;
-declare columns_list text;
+--declare keys_to_ignore text;
 BEGIN
+
+RAISE INFO 'entering feed_data_tables_from_central for table %', table_name; 
 EXECUTE format('SET search_path=odk_central;
 	DROP TABLE IF EXISTS data_table;
 	CREATE TABLE data_table(data_id text, key text, value json);
@@ -352,20 +370,20 @@ EXECUTE format('SET search_path=odk_central;
 		t.value
 	  FROM doc_key_and_value_recursive,
 		json_each(CASE 
-		  WHEN json_typeof(doc_key_and_value_recursive.value) <> ''object'' OR key IN (''point'',''ligne'',''polygone'') THEN ''{}'' :: JSON
+		  WHEN json_typeof(doc_key_and_value_recursive.value) <> ''object'' OR key IN (''geopoint_widget_placementmap'',''point'',''ligne'',''polygone'') THEN ''{}'' :: JSON
 		  ELSE doc_key_and_value_recursive.value
 		END) AS t
-	)SELECT data_id, key, value FROM doc_key_and_value_recursive WHERE json_typeof(value) <> ''object'' OR key IN (''point'',''ligne'',''polygone'') ORDER BY 2,1;'
+	)SELECT data_id, key, value FROM doc_key_and_value_recursive WHERE json_typeof(value) <> ''object'' OR key IN (''geopoint_widget_placementmap'',''point'',''ligne'',''polygone'') ORDER BY 2,1;'
 );
-
-query_a = 'SELECT data_id, key, value FROM data_table ORDER BY 1,2';
-query_b = 'SELECT DISTINCT key FROM data_table ORDER BY 1';
-query_c = concat('SELECT dynamic_pivot(''',query_a,''',''', query_b,''',''curseur_central'');
-			   		SELECT create_table_from_refcursor(''',schema_name,''',''',table_name,'_data'', ''curseur_central'');
+				
+EXECUTE format('SELECT dynamic_pivot(''SELECT data_id, key, value FROM data_table ORDER BY 1,2'',''SELECT DISTINCT key FROM data_table ORDER BY 1'',''curseur_central'');
+			   		SELECT create_table_from_refcursor('''||schema_name||''','''||table_name||'_data'', ''curseur_central'');
 			   		MOVE BACKWARD FROM "curseur_central";
-			   		SELECT insert_into_from_refcursor(''',schema_name,''',''',table_name,'_data'', ''curseur_central'');
-				   	CLOSE "curseur_central"');
-EXECUTE (query_c);
+			   		SELECT insert_into_from_refcursor('''||schema_name||''','''||table_name||'_data'', ''curseur_central'');
+				   	CLOSE "curseur_central"'
+			  );	
+RAISE INFO 'exiting from feed_data_tables_from_central for table %', table_name; 
+
 END;
 $BODY$;
 
@@ -411,6 +429,7 @@ AS $BODY$
 DECLARE
   _sql       text;
   _sql_val   text = '';
+  _sql_col   text = '';
   _row       record;
   _hasvalues boolean = FALSE;
 BEGIN
@@ -418,8 +437,6 @@ BEGIN
   LOOP   --for each row
     FETCH _ref INTO _row;
     EXIT WHEN NOT found;   --there are no rows more
-
-    _hasvalues = TRUE;
 
     SELECT _sql_val || '
            (' ||
@@ -430,20 +447,28 @@ BEGIN
 				   ELSE 
 				   concat('''',replace(trim(val.value :: text,'\"'),'''',''''''),'''')
 				   END)
-			   , ',') ||
+			   , ',' ORDER BY val.key) ||
            '),'
         INTO _sql_val
     FROM JSON_EACH(TO_JSON(_row)) val;
-  END LOOP;
+
+    SELECT _sql_col || STRING_AGG(concat('"',val.key :: text,'"'), ',' ORDER BY val.key) 
+        INTO _sql_col
+    FROM JSON_EACH(TO_JSON(_row)) val;
 
   _sql_val = TRIM(TRAILING ',' FROM _sql_val);
+  _sql_col = TRIM(TRAILING ',' FROM _sql_col);
   _sql = '
-          INSERT INTO ' || _schema_name || '.' || _table_name || '
+          INSERT INTO ' || _schema_name || '.' || _table_name || '(' || _sql_col || ')
           VALUES ' || _sql_val ||' ON CONFLICT (data_id) DO NOTHING;';
+	
+	EXECUTE (_sql);
+	_sql_val = '';
+	_sql_col = '';
+  END LOOP;
+  
   --RAISE NOTICE 'insert_into_from_refcursor(): SQL is: %', _sql;
-  IF _hasvalues THEN    --to avoid error when trying to insert 0 values
-    EXECUTE (_sql);
-  END IF;
+
 END;
 $BODY$;
 
