@@ -353,7 +353,7 @@ AS $BODY$
 BEGIN
 
 RAISE INFO 'entering feed_data_tables_from_central for table %', table_name; 
-EXECUTE format('SET search_path=odk_central;
+EXECUTE format('SET search_path=odk_central, public ;
 	DROP TABLE IF EXISTS data_table;
 	CREATE TABLE data_table(data_id text, key text, value json);
 	INSERT INTO  data_table(data_id, key, value) 
