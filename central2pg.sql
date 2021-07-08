@@ -131,7 +131,7 @@ EXECUTE (
 		'DROP TABLE IF EXISTS central_json_from_central;
 		 CREATE TEMP TABLE central_json_from_central(form_data json);'
 		);
-EXECUTE format('COPY central_json_from_central FROM PROGRAM ''curl -k --connect-timeout 5 --max-time 10 --retry 5 --retry-delay 0 --retry-max-time 40 --user "'||email||':'||password||'" "'||url||'"'' CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
+EXECUTE format('COPY central_json_from_central FROM PROGRAM ''curl -k --connect-timeout 20 --retry 5 --retry-max-time 40 --user "'||email||':'||password||'" "'||url||'"'' CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
 RETURN QUERY EXECUTE 
 FORMAT('WITH data AS (SELECT json_array_elements(form_data -> ''value'') AS form_data FROM central_json_from_central)
 	   SELECT '''||email||''' as user_name, '''||password||''' as pass_word, '''||central_domain||''' as central_fqdn, '||project_id||' as project, '''||form_id||''' as form, (form_data ->> ''name'') AS table_name FROM data;');
@@ -206,14 +206,14 @@ EXECUTE (
 		'DROP TABLE IF EXISTS central_json_from_central;
 		 CREATE TEMP TABLE central_json_from_central(form_data json);'
 		);
-EXECUTE format('COPY central_json_from_central FROM PROGRAM ''curl -k --connect-timeout 5 --max-time 10 --retry 5 --retry-delay 0 --retry-max-time 40 --user "'||email||':'||password||'" "'||url||column_to_filter||'%%20'||filter||'%%20'||filter_value||'"'' CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
+EXECUTE format('COPY central_json_from_central FROM PROGRAM ''curl -k --connect-timeout 20 --retry 5 --retry-max-time 40 --user "'||email||':'||password||'" "'||url||column_to_filter||'%%20'||filter||'%%20'||filter_value||'"'' CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
 EXECUTE format('CREATE TABLE IF NOT EXISTS '||destination_schema_name||'.'||destination_table_name||' (form_data json);');
 EXECUTE format ('CREATE UNIQUE INDEX IF NOT EXISTS '||destination_table_name||'_id_idx
     ON '||destination_schema_name||'.'||destination_table_name||' USING btree
     ((form_data ->> ''__id''::text) COLLATE pg_catalog."default" ASC NULLS LAST)
     TABLESPACE pg_default;');
 EXECUTE format('INSERT into '||destination_schema_name||'.'||destination_table_name||'(form_data) SELECT json_array_elements(form_data -> ''value'') AS form_data FROM central_json_from_central ON CONFLICT ((form_data ->> ''__id''::text)) DO NOTHING;');
-END;
+END;                                                                                                                                                       
 $BODY$;
 
 COMMENT ON FUNCTION  get_submission_from_central(
