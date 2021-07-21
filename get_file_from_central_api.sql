@@ -39,7 +39,7 @@ BEGIN
 url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'/Submissions/',submission_id,'/attachments/',image);
 EXECUTE format('DROP TABLE IF EXISTS central_media_from_central;');
 EXECUTE format('CREATE TEMP TABLE central_media_from_central(reponse text);');
-EXECUTE format('COPY central_media_from_central FROM PROGRAM ''curl -k --user "'||email||':'||password||'" -o '||destination||'/'||output||' "'||url||'"'';');
+EXECUTE format('COPY central_media_from_central FROM PROGRAM ''curl --insecure --max-time 30 --user "'||email||':'||password||'" -o '||destination||'/'||output||' "'||url||'"'';');
 END;
 $BODY$;
 
@@ -59,5 +59,3 @@ COMMENT ON FUNCTION get_file_from_central_api(text, text, text, integer, text, t
 	
 	returning :
 		void';
-	
-	

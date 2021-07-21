@@ -12,9 +12,6 @@ FUNCTION: get_submission_from_central(text, text, text, integer, text, text, tex
 		project_id integer				-- the Id of the project ex. 4
 		form_id text					-- the name of the Form ex. Sicen
 		form_table_name text			-- the table of the form to get value from (one of thoses returned by get_form_tables_list_from_central() function
-		column_to_filter text			-- the column (__system/submitterId or __system/submissionDate  on wich you want to apply a filter (only works on Submissions table
-		filter text						-- the filter to apply (gt = greater than, lt = lower than)
-		filter_value text				-- the value to compare the column with
 		destination_schema_name text 	-- the name of the schema where to create the permanent table 
 		destination_table_name text		-- the name of this table 
 	
@@ -33,9 +30,6 @@ CREATE OR REPLACE FUNCTION get_submission_from_central(
 	project_id integer,				
 	form_id text,					
 	form_table_name text,			
-	column_to_filter text,			
-	filter text,					
-	filter_value text,				
 	destination_schema_name text, 	
 	destination_table_name text		
 	)
@@ -47,19 +41,19 @@ AS $BODY$
 declare url text;
 declare requete text;
 BEGIN
-url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'.svc/',form_table_name,'?%%24filter=');
+url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'.svc/',form_table_name);
 EXECUTE (
 		'DROP TABLE IF EXISTS central_json_from_central;
 		 CREATE TEMP TABLE central_json_from_central(form_data json);'
 		);
-EXECUTE format('COPY central_json_from_central FROM PROGRAM ''curl -k --connect-timeout 20 --retry 5 --retry-max-time 40 --user "'||email||':'||password||'" "'||url||column_to_filter||'%%20'||filter||'%%20'||filter_value||'"'' CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
+EXECUTE format('COPY central_json_from_central FROM PROGRAM ''curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 --user "'||email||':'||password||'" "'||url||'"'' CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
 EXECUTE format('CREATE TABLE IF NOT EXISTS '||destination_schema_name||'.'||destination_table_name||' (form_data json);');
 EXECUTE format ('CREATE UNIQUE INDEX IF NOT EXISTS '||destination_table_name||'_id_idx
     ON '||destination_schema_name||'.'||destination_table_name||' USING btree
     ((form_data ->> ''__id''::text) COLLATE pg_catalog."default" ASC NULLS LAST)
     TABLESPACE pg_default;');
 EXECUTE format('INSERT into '||destination_schema_name||'.'||destination_table_name||'(form_data) SELECT json_array_elements(form_data -> ''value'') AS form_data FROM central_json_from_central ON CONFLICT ((form_data ->> ''__id''::text)) DO NOTHING;');
-END;                                                                                                                                                       
+END;
 $BODY$;
 
 COMMENT ON FUNCTION  get_submission_from_central(
@@ -76,9 +70,6 @@ COMMENT ON FUNCTION  get_submission_from_central(
 		project_id integer				-- the Id of the project ex. 4
 		form_id text					-- the name of the Form ex. Sicen
 		form_table_name text			-- the table of the form to get value from (one of thoses returned by get_form_tables_list_from_central() function
-		column_to_filter text			-- the column (__system/submitterId or __system/submissionDate  on wich you want to apply a filter (only works on Submissions table
-		filter text						-- the filter to apply (gt = greater than, lt = lower than)
-		filter_value text				-- the value to compare the column with
 		destination_schema_name text 	-- the name of the schema where to create the permanent table 
 		destination_table_name text		-- the name of this table 
 	
@@ -88,5 +79,3 @@ COMMENT ON FUNCTION  get_submission_from_central(
 	comment : 	
 	future version should use filters... With more parameters
 	Waiting for centra next release (probably May 2021)';
-	
-	

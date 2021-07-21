@@ -82,5 +82,3 @@ COMMENT ON function insert_into_from_refcursor(text,text,refcursor)IS '
 	void
 	
 -> is adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381';
-
-

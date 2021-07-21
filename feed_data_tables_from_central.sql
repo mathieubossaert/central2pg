@@ -30,7 +30,7 @@ AS $BODY$
 BEGIN
 
 RAISE INFO 'entering feed_data_tables_from_central for table %', table_name; 
-EXECUTE format('SET search_path=odk_central, public ;
+EXECUTE format('SET search_path=odk_central,pubic;
 	DROP TABLE IF EXISTS data_table;
 	CREATE TABLE data_table(data_id text, key text, value json);
 	INSERT INTO  data_table(data_id, key, value) 
@@ -77,5 +77,3 @@ IS 'description :
 	comment :
 		Should accept a "keys_to_ignore" parameter (as for geojson fields we want to keep as geojson).
 		For the moment the function is specific to our naming convention (point, ligne, polygone)';
-
-

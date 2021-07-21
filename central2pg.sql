@@ -90,10 +90,7 @@ COMMENT ON FUNCTION dynamic_pivot(text, text,refcursor) IS 'description :
 		INOUT cname refcursor	-- the name of the cursor
 	
 	returning :
-		refcursor';
-
-
-/*
+		refcursor';/*
 FUNCTION: get_form_tables_list_from_central(text, text, text, integer, text)
 	description :
 		Returns the lists of "table" composing a form. The "core" one and each one corresponding to each repeat_group.
@@ -131,7 +128,7 @@ EXECUTE (
 		'DROP TABLE IF EXISTS central_json_from_central;
 		 CREATE TEMP TABLE central_json_from_central(form_data json);'
 		);
-EXECUTE format('COPY central_json_from_central FROM PROGRAM ''curl -k --connect-timeout 20 --retry 5 --retry-max-time 40 --user "'||email||':'||password||'" "'||url||'"'' CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
+EXECUTE format('COPY central_json_from_central FROM PROGRAM ''curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 --user "'||email||':'||password||'" "'||url||'"'' CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
 RETURN QUERY EXECUTE 
 FORMAT('WITH data AS (SELECT json_array_elements(form_data -> ''value'') AS form_data FROM central_json_from_central)
 	   SELECT '''||email||''' as user_name, '''||password||''' as pass_word, '''||central_domain||''' as central_fqdn, '||project_id||' as project, '''||form_id||''' as form, (form_data ->> ''name'') AS table_name FROM data;');
@@ -149,10 +146,7 @@ COMMENT ON FUNCTION get_form_tables_list_from_central(text, text, text, integer,
 		form_id text			-- the name of the Form ex. Sicen
 	
 	returning :
-		TABLE(user_name text, pass_word text, central_fqdn text, project integer, form text, tablename text)';
-
-
-/*
+		TABLE(user_name text, pass_word text, central_fqdn text, project integer, form text, tablename text)';/*
 FUNCTION: get_submission_from_central(text, text, text, integer, text, text, text, text, text, text, text)
 	description
 		Get json data from Central, feed a temporary table with a generic name central_json_from_central.
@@ -166,9 +160,6 @@ FUNCTION: get_submission_from_central(text, text, text, integer, text, text, tex
 		project_id integer				-- the Id of the project ex. 4
 		form_id text					-- the name of the Form ex. Sicen
 		form_table_name text			-- the table of the form to get value from (one of thoses returned by get_form_tables_list_from_central() function
-		column_to_filter text			-- the column (__system/submitterId or __system/submissionDate  on wich you want to apply a filter (only works on Submissions table
-		filter text						-- the filter to apply (gt = greater than, lt = lower than)
-		filter_value text				-- the value to compare the column with
 		destination_schema_name text 	-- the name of the schema where to create the permanent table 
 		destination_table_name text		-- the name of this table 
 	
@@ -187,9 +178,6 @@ CREATE OR REPLACE FUNCTION get_submission_from_central(
 	project_id integer,				
 	form_id text,					
 	form_table_name text,			
-	column_to_filter text,			
-	filter text,					
-	filter_value text,				
 	destination_schema_name text, 	
 	destination_table_name text		
 	)
@@ -201,19 +189,19 @@ AS $BODY$
 declare url text;
 declare requete text;
 BEGIN
-url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'.svc/',form_table_name,'?%%24filter=');
+url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'.svc/',form_table_name);
 EXECUTE (
 		'DROP TABLE IF EXISTS central_json_from_central;
 		 CREATE TEMP TABLE central_json_from_central(form_data json);'
 		);
-EXECUTE format('COPY central_json_from_central FROM PROGRAM ''curl -k --connect-timeout 20 --retry 5 --retry-max-time 40 --user "'||email||':'||password||'" "'||url||column_to_filter||'%%20'||filter||'%%20'||filter_value||'"'' CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
+EXECUTE format('COPY central_json_from_central FROM PROGRAM ''curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 --user "'||email||':'||password||'" "'||url||'"'' CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
 EXECUTE format('CREATE TABLE IF NOT EXISTS '||destination_schema_name||'.'||destination_table_name||' (form_data json);');
 EXECUTE format ('CREATE UNIQUE INDEX IF NOT EXISTS '||destination_table_name||'_id_idx
     ON '||destination_schema_name||'.'||destination_table_name||' USING btree
     ((form_data ->> ''__id''::text) COLLATE pg_catalog."default" ASC NULLS LAST)
     TABLESPACE pg_default;');
 EXECUTE format('INSERT into '||destination_schema_name||'.'||destination_table_name||'(form_data) SELECT json_array_elements(form_data -> ''value'') AS form_data FROM central_json_from_central ON CONFLICT ((form_data ->> ''__id''::text)) DO NOTHING;');
-END;                                                                                                                                                       
+END;
 $BODY$;
 
 COMMENT ON FUNCTION  get_submission_from_central(
@@ -230,9 +218,6 @@ COMMENT ON FUNCTION  get_submission_from_central(
 		project_id integer				-- the Id of the project ex. 4
 		form_id text					-- the name of the Form ex. Sicen
 		form_table_name text			-- the table of the form to get value from (one of thoses returned by get_form_tables_list_from_central() function
-		column_to_filter text			-- the column (__system/submitterId or __system/submissionDate  on wich you want to apply a filter (only works on Submissions table
-		filter text						-- the filter to apply (gt = greater than, lt = lower than)
-		filter_value text				-- the value to compare the column with
 		destination_schema_name text 	-- the name of the schema where to create the permanent table 
 		destination_table_name text		-- the name of this table 
 	
@@ -241,7 +226,87 @@ COMMENT ON FUNCTION  get_submission_from_central(
 
 	comment : 	
 	future version should use filters... With more parameters
-	Waiting for centra next release (probably May 2021)';
+	Waiting for centra next release (probably May 2021)';/*
+FUNCTION: get_all_data_from_central_tabe(text, text, text, integer, text, text, text, text)
+	description
+		Get json data from Central, feed a temporary table with a generic name central_json_from_central.
+		Once the temp table is created and filled, PG checks if the destination (permanent) table exists. If not PG creates it with only one json column named "value".
+		PG does the same to check if a unique constraint on the __id exists. This index will be use to ignore subissions already previously inserted in the table, using an "ON CONFLICT xxx DO NOTHING"
+	
+	parameters :
+		email text						-- the login (email adress) of a user who can get submissions
+		password text					-- his password
+		central_domain text 			-- ODK Central fqdn : central.mydomain.org
+		project_id integer				-- the Id of the project ex. 4
+		form_id text					-- the name of the Form ex. Sicen
+		form_table_name text			-- the table of the form to get value from (one of thoses returned by get_form_tables_list_from_central() function
+		destination_schema_name text 	-- the name of the schema where to create the permanent table 
+		destination_table_name text		-- the name of this table 
+	
+	returning :
+		void
+
+	comment : 	
+	future version should use filters... With more parameters
+	Waiting for centra next release (probably May 2021)
+*/
+
+CREATE OR REPLACE FUNCTION get_all_data_from_central_tabe(
+	email text,						
+	password text,					
+	central_domain text, 			
+	project_id integer,				
+	form_id text,					
+	form_table_name text,			
+	destination_schema_name text, 	
+	destination_table_name text		
+	)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+AS $BODY$
+declare url text;
+declare requete text;
+BEGIN
+url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'.svc/',form_table_name,'?%%24filter=');
+EXECUTE (
+		'DROP TABLE IF EXISTS central_json_from_central;
+		 CREATE TEMP TABLE central_json_from_central(form_data json);'
+		);
+EXECUTE format('COPY central_json_from_central FROM PROGRAM ''curl -k --retry 5 --retry-max-time 40 --user "'||email||':'||password||'" "'||url||'"'' CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
+EXECUTE format('CREATE TABLE IF NOT EXISTS '||destination_schema_name||'.'||destination_table_name||' (form_data json);');
+EXECUTE format ('CREATE UNIQUE INDEX IF NOT EXISTS '||destination_table_name||'_id_idx
+    ON '||destination_schema_name||'.'||destination_table_name||' USING btree
+    ((form_data ->> ''__id''::text) COLLATE pg_catalog."default" ASC NULLS LAST)
+    TABLESPACE pg_default;');
+EXECUTE format('INSERT into '||destination_schema_name||'.'||destination_table_name||'(form_data) SELECT json_array_elements(form_data -> ''value'') AS form_data FROM central_json_from_central ON CONFLICT ((form_data ->> ''__id''::text)) DO NOTHING;');
+END;                                                                                                                                                       
+$BODY$;
+
+COMMENT ON FUNCTION  get_all_data_from_central_tabe(
+	text,text,text,integer,text,text,text,text)
+	IS 'description :
+		Get json data from Central, feed a temporary table with a generic name central_json_from_central.
+		Once the temp table is created and filled, PG checks if the destination (permanent) table exists. If not PG creates it with only one json column named "value".
+		PG does the same to check if a unique constraint on the __id exists. This index will be use to ignore subissions already previously inserted in the table, using an "ON CONFLICT xxx DO NOTHING"
+	
+	parameters :
+		email text						-- the login (email adress) of a user who can get submissions
+		password text					-- his password
+		central_domain text 			-- ODK Central fqdn : central.mydomain.org
+		project_id integer				-- the Id of the project ex. 4
+		form_id text					-- the name of the Form ex. Sicen
+		form_table_name text			-- the table of the form to get value from (one of thoses returned by get_form_tables_list_from_central() function
+		destination_schema_name text 	-- the name of the schema where to create the permanent table 
+		destination_table_name text		-- the name of this table 
+	
+	returning :
+		void
+
+	comment : 	
+	future version should use filters... With more parameters
+	Waiting for central next release (probably May 2021)';
 	
 	
 /*
@@ -318,10 +383,7 @@ COMMENT ON function create_table_from_refcursor(text,text,refcursor) IS 'descrip
 	_ref refcursor			-- the name of the refcursor to get data from
 	
 	returning :
-	void';
-
-
-/*
+	void';/*
 FUNCTION: feed_data_tables_from_central(text, text)
 
 !!! You need to edit and set the correct search_path at the beginig of the EXECUTE statement : SET search_path=odk_central; Replace "odk_central" by the name of the schema where you created the functions !!!
@@ -353,7 +415,7 @@ AS $BODY$
 BEGIN
 
 RAISE INFO 'entering feed_data_tables_from_central for table %', table_name; 
-EXECUTE format('SET search_path=odk_central, public ;
+EXECUTE format('SET search_path=odk_central,pubic;
 	DROP TABLE IF EXISTS data_table;
 	CREATE TABLE data_table(data_id text, key text, value json);
 	INSERT INTO  data_table(data_id, key, value) 
@@ -399,10 +461,7 @@ IS 'description :
 		
 	comment :
 		Should accept a "keys_to_ignore" parameter (as for geojson fields we want to keep as geojson).
-		For the moment the function is specific to our naming convention (point, ligne, polygone)';
-
-
-/*
+		For the moment the function is specific to our naming convention (point, ligne, polygone)';/*
 FUNCTION: insert_into_from_refcursor(text, text, refcursor)	
 	description :
 	-> adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
@@ -485,10 +544,7 @@ COMMENT ON function insert_into_from_refcursor(text,text,refcursor)IS '
 	returning :
 	void
 	
--> is adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381';
-
-
-/*
+-> is adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381';/*
 FUNCTION: get_file_from_central_api(text, text, text, integer, text, text, text, text, text)
 	description :
 		Download each media mentioned in submissions
@@ -529,7 +585,7 @@ BEGIN
 url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'/Submissions/',submission_id,'/attachments/',image);
 EXECUTE format('DROP TABLE IF EXISTS central_media_from_central;');
 EXECUTE format('CREATE TEMP TABLE central_media_from_central(reponse text);');
-EXECUTE format('COPY central_media_from_central FROM PROGRAM ''curl -k --user "'||email||':'||password||'" -o '||destination||'/'||output||' "'||url||'"'';');
+EXECUTE format('COPY central_media_from_central FROM PROGRAM ''curl --insecure --max-time 30 --user "'||email||':'||password||'" -o '||destination||'/'||output||' "'||url||'"'';');
 END;
 $BODY$;
 
@@ -549,5 +605,3 @@ COMMENT ON FUNCTION get_file_from_central_api(text, text, text, integer, text, t
 	
 	returning :
 		void';
-	
-	
