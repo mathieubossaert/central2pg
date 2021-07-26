@@ -51,7 +51,7 @@ ALTER FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, text, te
 
 COMMENT ON FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, text, text)
     IS 'description :
-		wrap all function call toi rtetrieve data from central to postgresql
+		wrap the calling of both functions get_submission_from_central() and feed_data_tables_from_central() functions 
 	parameters :
 		email text						-- the login (email adress) of a user who can get submissions
 		password text					-- his password

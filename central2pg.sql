@@ -91,6 +91,163 @@ COMMENT ON FUNCTION dynamic_pivot(text, text,refcursor) IS 'description :
 	
 	returning :
 		refcursor';/*
+FUNCTION: create_table_from_refcursor(text, refcursor)
+	description : 
+	-> inspired by https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
+	Create a table corresponding to the curso structure (attribute types and names)
+	
+	parameters :
+	_table_name text 		-- the name of the table to create
+	_ref refcursor			-- the name of the refcursor to get data from
+	
+	returning :
+	void
+*/
+
+CREATE OR REPLACE FUNCTION create_table_from_refcursor(
+	_schema_name text,
+	_table_name text,
+	_ref refcursor)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+AS $BODY$
+DECLARE
+  _sql       text;
+  _sql_index       text;
+  _sql_val   text = '';
+  _sql_existing_cols   text = '';
+  _sql_new_cols   text = '';
+  _row       record;
+BEGIN
+ RAISE INFO 'entering create_table_from_refcursor() for table %',_table_name; 
+    FETCH FIRST FROM _ref INTO _row;
+    SELECT _sql_val || '
+           (' ||
+           STRING_AGG(concat('"',val.key :: text,'" text'), ',') ||
+           ')'
+        INTO _sql_val
+    FROM JSON_EACH(TO_JSON(_row)) val;
+  _sql = '
+          CREATE TABLE IF NOT EXISTS ' || _schema_name ||'.'|| _table_name || '
+          ' || _sql_val;
+    EXECUTE (_sql);
+  _sql_index = 'CREATE UNIQUE INDEX IF NOT EXISTS '||replace(_table_name,'.','_')||'_id_idx
+    ON '||_schema_name||'.'||_table_name||' USING btree (data_id)
+    TABLESPACE pg_default;';
+    EXECUTE (_sql_index);
+	
+	/* ading new columns */
+	SELECT _sql_new_cols || 
+           STRING_AGG(concat('ALTER TABLE ' , _schema_name ,'.', _table_name , ' ADD COLUMN "',val.key :: text,'" text'), ';') ||';'
+        INTO _sql_new_cols
+    FROM JSON_EACH(TO_JSON(_row)) val
+	WHERE val.key NOT IN ( SELECT attname 
+ FROM pg_class JOIN pg_attribute ON pg_attribute.attrelid=pg_class.oid
+ JOIN pg_namespace ON relnamespace = pg_namespace.oid
+ WHERE nspname = _schema_name
+   AND relkind = 'r' AND pg_class.relname = _table_name AND attnum > 0 AND attname = val.key
+);
+	-- Create new attributes or Run a dummy query if nothing new
+    EXECUTE (COALESCE(_sql_new_cols,'SELECT true;')); 
+ RAISE INFO 'exiting from  create_table_from_refcursor() for table %',_table_name; 
+ RAISE INFO 'create_table_from_refcursor(): SQL statement is: %', COALESCE(_sql_new_cols,'no new column to add');
+END;
+$BODY$;
+COMMENT ON function create_table_from_refcursor(text,text,refcursor) IS 'description : 
+	-> inspired by https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
+	Create a table corresponding to the curso structure (attribute types and names)
+	
+	parameters :
+	_table_name text 		-- the name of the table to create
+	_ref refcursor			-- the name of the refcursor to get data from
+	
+	returning :
+	void';/*
+FUNCTION: insert_into_from_refcursor(text, text, refcursor)	
+	description :
+	-> adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
+	Feed the table with data
+	
+	parameters :
+	_schema_name text, 		-- the name of the schema where to create the table
+	_table_name text, 		-- the name of the table to create
+	_ref refcursor			-- the name of the refcursor to get data from
+	
+	returning :
+	void
+*/
+
+CREATE OR REPLACE FUNCTION insert_into_from_refcursor(
+	_schema_name text,
+	_table_name text,
+	_ref refcursor)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+AS $BODY$
+DECLARE
+  _sql       text;
+  _sql_val   text = '';
+  _sql_col   text = '';
+  _row       record;
+  _hasvalues boolean = FALSE;
+BEGIN
+
+  LOOP   --for each row
+    FETCH _ref INTO _row;
+    EXIT WHEN NOT found;   --there are no rows more
+
+    SELECT _sql_val || '
+           (' ||
+           STRING_AGG(
+			   concat(
+				   CASE WHEN val.value::text='null' OR val.value::text='' OR val.value::text='\null' OR val.value::text='"null"'
+				   THEN 'null'
+				   ELSE 
+				   concat('''',replace(trim(val.value :: text,'\"'),'''',''''''),'''')
+				   END)
+			   , ',' ORDER BY val.key) ||
+           '),'
+        INTO _sql_val
+    FROM JSON_EACH(TO_JSON(_row)) val;
+
+    SELECT _sql_col || STRING_AGG(concat('"',val.key :: text,'"'), ',' ORDER BY val.key) 
+        INTO _sql_col
+    FROM JSON_EACH(TO_JSON(_row)) val;
+
+  _sql_val = TRIM(TRAILING ',' FROM _sql_val);
+  _sql_col = TRIM(TRAILING ',' FROM _sql_col);
+  _sql = '
+          INSERT INTO ' || _schema_name || '.' || _table_name || '(' || _sql_col || ')
+          VALUES ' || _sql_val ||' ON CONFLICT (data_id) DO NOTHING;';
+	
+	EXECUTE (_sql);
+	_sql_val = '';
+	_sql_col = '';
+  END LOOP;
+  
+  --RAISE NOTICE 'insert_into_from_refcursor(): SQL is: %', _sql;
+
+END;
+$BODY$;
+
+COMMENT ON function insert_into_from_refcursor(text,text,refcursor)IS '	
+	description :
+	-> adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
+	Feed the table with data
+	
+	parameters :
+	_schema_name text, 		-- the name of the schema where to create the table
+	_table_name text, 		-- the name of the table to create
+	_ref refcursor			-- the name of the refcursor to get data from
+	
+	returning :
+	void
+	
+-> is adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381';/*
 FUNCTION: get_form_tables_list_from_central(text, text, text, integer, text)
 	description :
 		Returns the lists of "table" composing a form. The "core" one and each one corresponding to each repeat_group.
@@ -227,163 +384,6 @@ COMMENT ON FUNCTION  get_submission_from_central(
 	comment : 	
 	future version should use filters... With more parameters
 	Waiting for centra next release (probably May 2021)';/*
-FUNCTION: get_all_data_from_central_tabe(text, text, text, integer, text, text, text, text)
-	description
-		Get json data from Central, feed a temporary table with a generic name central_json_from_central.
-		Once the temp table is created and filled, PG checks if the destination (permanent) table exists. If not PG creates it with only one json column named "value".
-		PG does the same to check if a unique constraint on the __id exists. This index will be use to ignore subissions already previously inserted in the table, using an "ON CONFLICT xxx DO NOTHING"
-	
-	parameters :
-		email text						-- the login (email adress) of a user who can get submissions
-		password text					-- his password
-		central_domain text 			-- ODK Central fqdn : central.mydomain.org
-		project_id integer				-- the Id of the project ex. 4
-		form_id text					-- the name of the Form ex. Sicen
-		form_table_name text			-- the table of the form to get value from (one of thoses returned by get_form_tables_list_from_central() function
-		destination_schema_name text 	-- the name of the schema where to create the permanent table 
-		destination_table_name text		-- the name of this table 
-	
-	returning :
-		void
-
-	comment : 	
-	future version should use filters... With more parameters
-	Waiting for centra next release (probably May 2021)
-*/
-
-CREATE OR REPLACE FUNCTION get_all_data_from_central_tabe(
-	email text,						
-	password text,					
-	central_domain text, 			
-	project_id integer,				
-	form_id text,					
-	form_table_name text,			
-	destination_schema_name text, 	
-	destination_table_name text		
-	)
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE PARALLEL UNSAFE
-AS $BODY$
-declare url text;
-declare requete text;
-BEGIN
-url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'.svc/',form_table_name,'?%%24filter=');
-EXECUTE (
-		'DROP TABLE IF EXISTS central_json_from_central;
-		 CREATE TEMP TABLE central_json_from_central(form_data json);'
-		);
-EXECUTE format('COPY central_json_from_central FROM PROGRAM ''curl -k --retry 5 --retry-max-time 40 --user "'||email||':'||password||'" "'||url||'"'' CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
-EXECUTE format('CREATE TABLE IF NOT EXISTS '||destination_schema_name||'.'||destination_table_name||' (form_data json);');
-EXECUTE format ('CREATE UNIQUE INDEX IF NOT EXISTS '||destination_table_name||'_id_idx
-    ON '||destination_schema_name||'.'||destination_table_name||' USING btree
-    ((form_data ->> ''__id''::text) COLLATE pg_catalog."default" ASC NULLS LAST)
-    TABLESPACE pg_default;');
-EXECUTE format('INSERT into '||destination_schema_name||'.'||destination_table_name||'(form_data) SELECT json_array_elements(form_data -> ''value'') AS form_data FROM central_json_from_central ON CONFLICT ((form_data ->> ''__id''::text)) DO NOTHING;');
-END;                                                                                                                                                       
-$BODY$;
-
-COMMENT ON FUNCTION  get_all_data_from_central_tabe(
-	text,text,text,integer,text,text,text,text)
-	IS 'description :
-		Get json data from Central, feed a temporary table with a generic name central_json_from_central.
-		Once the temp table is created and filled, PG checks if the destination (permanent) table exists. If not PG creates it with only one json column named "value".
-		PG does the same to check if a unique constraint on the __id exists. This index will be use to ignore subissions already previously inserted in the table, using an "ON CONFLICT xxx DO NOTHING"
-	
-	parameters :
-		email text						-- the login (email adress) of a user who can get submissions
-		password text					-- his password
-		central_domain text 			-- ODK Central fqdn : central.mydomain.org
-		project_id integer				-- the Id of the project ex. 4
-		form_id text					-- the name of the Form ex. Sicen
-		form_table_name text			-- the table of the form to get value from (one of thoses returned by get_form_tables_list_from_central() function
-		destination_schema_name text 	-- the name of the schema where to create the permanent table 
-		destination_table_name text		-- the name of this table 
-	
-	returning :
-		void
-
-	comment : 	
-	future version should use filters... With more parameters
-	Waiting for central next release (probably May 2021)';
-	
-	
-/*
-FUNCTION: create_table_from_refcursor(text, refcursor)
-	description : 
-	-> inspired by https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
-	Create a table corresponding to the curso structure (attribute types and names)
-	
-	parameters :
-	_table_name text 		-- the name of the table to create
-	_ref refcursor			-- the name of the refcursor to get data from
-	
-	returning :
-	void
-*/
-
-CREATE OR REPLACE FUNCTION create_table_from_refcursor(
-	_schema_name text,
-	_table_name text,
-	_ref refcursor)
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE PARALLEL UNSAFE
-AS $BODY$
-DECLARE
-  _sql       text;
-  _sql_index       text;
-  _sql_val   text = '';
-  _sql_existing_cols   text = '';
-  _sql_new_cols   text = '';
-  _row       record;
-BEGIN
- RAISE INFO 'entering create_table_from_refcursor() for table %',_table_name; 
-    FETCH FIRST FROM _ref INTO _row;
-    SELECT _sql_val || '
-           (' ||
-           STRING_AGG(concat('"',val.key :: text,'" text'), ',') ||
-           ')'
-        INTO _sql_val
-    FROM JSON_EACH(TO_JSON(_row)) val;
-  _sql = '
-          CREATE TABLE IF NOT EXISTS ' || _schema_name ||'.'|| _table_name || '
-          ' || _sql_val;
-    EXECUTE (_sql);
-  _sql_index = 'CREATE UNIQUE INDEX IF NOT EXISTS '||replace(_table_name,'.','_')||'_id_idx
-    ON '||_schema_name||'.'||_table_name||' USING btree (data_id)
-    TABLESPACE pg_default;';
-    EXECUTE (_sql_index);
-	
-	/* ading new columns */
-	SELECT _sql_new_cols || 
-           STRING_AGG(concat('ALTER TABLE ' , _schema_name ,'.', _table_name , ' ADD COLUMN "',val.key :: text,'" text'), ';') ||';'
-        INTO _sql_new_cols
-    FROM JSON_EACH(TO_JSON(_row)) val
-	WHERE val.key NOT IN ( SELECT attname 
- FROM pg_class JOIN pg_attribute ON pg_attribute.attrelid=pg_class.oid
- JOIN pg_namespace ON relnamespace = pg_namespace.oid
- WHERE nspname = _schema_name
-   AND relkind = 'r' AND pg_class.relname = _table_name AND attnum > 0 AND attname = val.key
-);
-	-- Create new attributes or Run a dummy query if nothing new
-    EXECUTE (COALESCE(_sql_new_cols,'SELECT true;')); 
- RAISE INFO 'exiting from  create_table_from_refcursor() for table %',_table_name; 
- RAISE INFO 'create_table_from_refcursor(): SQL statement is: %', COALESCE(_sql_new_cols,'no new column to add');
-END;
-$BODY$;
-COMMENT ON function create_table_from_refcursor(text,text,refcursor) IS 'description : 
-	-> inspired by https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
-	Create a table corresponding to the curso structure (attribute types and names)
-	
-	parameters :
-	_table_name text 		-- the name of the table to create
-	_ref refcursor			-- the name of the refcursor to get data from
-	
-	returning :
-	void';/*
 FUNCTION: feed_data_tables_from_central(text, text)
 
 !!! You need to edit and set the correct search_path at the beginig of the EXECUTE statement : SET search_path=odk_central; Replace "odk_central" by the name of the schema where you created the functions !!!
@@ -462,89 +462,6 @@ IS 'description :
 	comment :
 		Should accept a "keys_to_ignore" parameter (as for geojson fields we want to keep as geojson).
 		For the moment the function is specific to our naming convention (point, ligne, polygone)';/*
-FUNCTION: insert_into_from_refcursor(text, text, refcursor)	
-	description :
-	-> adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
-	Feed the table with data
-	
-	parameters :
-	_schema_name text, 		-- the name of the schema where to create the table
-	_table_name text, 		-- the name of the table to create
-	_ref refcursor			-- the name of the refcursor to get data from
-	
-	returning :
-	void
-*/
-
-CREATE OR REPLACE FUNCTION insert_into_from_refcursor(
-	_schema_name text,
-	_table_name text,
-	_ref refcursor)
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE PARALLEL UNSAFE
-AS $BODY$
-DECLARE
-  _sql       text;
-  _sql_val   text = '';
-  _sql_col   text = '';
-  _row       record;
-  _hasvalues boolean = FALSE;
-BEGIN
-
-  LOOP   --for each row
-    FETCH _ref INTO _row;
-    EXIT WHEN NOT found;   --there are no rows more
-
-    SELECT _sql_val || '
-           (' ||
-           STRING_AGG(
-			   concat(
-				   CASE WHEN val.value::text='null' OR val.value::text='' OR val.value::text='\null' OR val.value::text='"null"'
-				   THEN 'null'
-				   ELSE 
-				   concat('''',replace(trim(val.value :: text,'\"'),'''',''''''),'''')
-				   END)
-			   , ',' ORDER BY val.key) ||
-           '),'
-        INTO _sql_val
-    FROM JSON_EACH(TO_JSON(_row)) val;
-
-    SELECT _sql_col || STRING_AGG(concat('"',val.key :: text,'"'), ',' ORDER BY val.key) 
-        INTO _sql_col
-    FROM JSON_EACH(TO_JSON(_row)) val;
-
-  _sql_val = TRIM(TRAILING ',' FROM _sql_val);
-  _sql_col = TRIM(TRAILING ',' FROM _sql_col);
-  _sql = '
-          INSERT INTO ' || _schema_name || '.' || _table_name || '(' || _sql_col || ')
-          VALUES ' || _sql_val ||' ON CONFLICT (data_id) DO NOTHING;';
-	
-	EXECUTE (_sql);
-	_sql_val = '';
-	_sql_col = '';
-  END LOOP;
-  
-  --RAISE NOTICE 'insert_into_from_refcursor(): SQL is: %', _sql;
-
-END;
-$BODY$;
-
-COMMENT ON function insert_into_from_refcursor(text,text,refcursor)IS '	
-	description :
-	-> adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
-	Feed the table with data
-	
-	parameters :
-	_schema_name text, 		-- the name of the schema where to create the table
-	_table_name text, 		-- the name of the table to create
-	_ref refcursor			-- the name of the refcursor to get data from
-	
-	returning :
-	void
-	
--> is adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381';/*
 FUNCTION: get_file_from_central_api(text, text, text, integer, text, text, text, text, text)
 	description :
 		Download each media mentioned in submissions
@@ -604,4 +521,69 @@ COMMENT ON FUNCTION get_file_from_central_api(text, text, text, integer, text, t
 		output text				-- filename with extension
 	
 	returning :
-		void';
+		void';/*
+FUNCTION: odk_central_to_pg(text, text, text, integer, text, text)
+	description
+		Retrieve all data from a given form to postgresql tables in the destination_schema.
+	
+	parameters :
+		email text						-- the login (email adress) of a user who can get submissions
+		password text					-- his password
+		central_domain text 			-- ODK Central fqdn : central.mydomain.org
+		project_id integer				-- the Id of the project ex. 4
+		form_id text					-- the name of the Form ex. Sicen
+		destination_schema_name text 	-- the name of the schema where to create the permanent table 
+	
+	returning :
+		void
+*/
+
+CREATE OR REPLACE FUNCTION odk_central.odk_central_to_pg(
+	email text,
+	password text,
+	central_domain text,
+	project_id integer,
+	form_id text,
+	destination_schema_name text)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+AS $BODY$
+BEGIN
+EXECUTE format('SELECT odk_central.get_submission_from_central(
+	user_name,
+	pass_word,
+	central_fqdn,
+	project,
+	form,
+	tablename,
+	'''||destination_schema_name||''',
+concat(''form_'',lower(form),''_'',lower(split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.''))))))
+FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
+
+EXECUTE format('
+SELECT odk_central.feed_data_tables_from_central(
+	'''||destination_schema_name||''',concat(''form_'',lower(form),''_'',lower(split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.''))))))
+FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
+END;
+$BODY$;
+
+ALTER FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, text, text)
+    OWNER TO dba;
+
+COMMENT ON FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, text, text)
+    IS 'description :
+		wrap the calling of both functions get_submission_from_central() and feed_data_tables_from_central() functions 
+	parameters :
+		email text						-- the login (email adress) of a user who can get submissions
+		password text					-- his password
+		central_domain text 			-- ODK Central fqdn : central.mydomain.org
+		project_id integer				-- the Id of the project ex. 4
+		form_id text					-- the name of the Form ex. Sicen
+		form_table_name text			-- the table of the form to get value from (one of thoses returned by get_form_tables_list_from_central() function
+		destination_schema_name text 	-- the name of the schema where to create the permanent table 
+	
+	returning :
+		void
+';
