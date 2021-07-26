@@ -51,14 +51,13 @@ ALTER FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, text, te
 
 COMMENT ON FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, text, text)
     IS 'description :
-		wrap the calling of both functions get_submission_from_central() and feed_data_tables_from_central() functions 
+		wrap the calling of both get_submission_from_central() and feed_data_tables_from_central() functions 
 	parameters :
 		email text						-- the login (email adress) of a user who can get submissions
 		password text					-- his password
 		central_domain text 			-- ODK Central fqdn : central.mydomain.org
 		project_id integer				-- the Id of the project ex. 4
 		form_id text					-- the name of the Form ex. Sicen
-		form_table_name text			-- the table of the form to get value from (one of thoses returned by get_form_tables_list_from_central() function
 		destination_schema_name text 	-- the name of the schema where to create the permanent table 
 	
 	returning :
