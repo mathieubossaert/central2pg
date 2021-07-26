@@ -462,7 +462,7 @@ IS 'description :
 	comment :
 		Should accept a "keys_to_ignore" parameter (as for geojson fields we want to keep as geojson).
 		For the moment the function is specific to our naming convention (point, ligne, polygone)';/*
-FUNCTION: get_file_from_central_api(text, text, text, integer, text, text, text, text, text)
+FUNCTION: get_file_from_central(text, text, text, integer, text, text, text, text, text)
 	description :
 		Download each media mentioned in submissions
 	
@@ -481,7 +481,7 @@ FUNCTION: get_file_from_central_api(text, text, text, integer, text, text, text,
 		void
 */
 
-CREATE OR REPLACE FUNCTION get_file_from_central_api(
+CREATE OR REPLACE FUNCTION get_file_from_central(
 	email text,				
 	password text,			
 	central_domain text, 	
@@ -506,7 +506,7 @@ EXECUTE format('COPY central_media_from_central FROM PROGRAM ''curl --insecure -
 END;
 $BODY$;
 
-COMMENT ON FUNCTION get_file_from_central_api(text, text, text, integer, text, text, text, text, text) IS 'description :
+COMMENT ON FUNCTION get_file_from_central(text, text, text, integer, text, text, text, text, text) IS 'description :
 		Download each media mentioned in submissions
 	
 	parameters :
@@ -574,14 +574,13 @@ ALTER FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, text, te
 
 COMMENT ON FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, text, text)
     IS 'description :
-		wrap the calling of both functions get_submission_from_central() and feed_data_tables_from_central() functions 
+		wrap the calling of both get_submission_from_central() and feed_data_tables_from_central() functions 
 	parameters :
 		email text						-- the login (email adress) of a user who can get submissions
 		password text					-- his password
 		central_domain text 			-- ODK Central fqdn : central.mydomain.org
 		project_id integer				-- the Id of the project ex. 4
 		form_id text					-- the name of the Form ex. Sicen
-		form_table_name text			-- the table of the form to get value from (one of thoses returned by get_form_tables_list_from_central() function
 		destination_schema_name text 	-- the name of the schema where to create the permanent table 
 	
 	returning :
