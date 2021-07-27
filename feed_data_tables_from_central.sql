@@ -8,19 +8,17 @@ FUNCTION: feed_data_tables_from_central(text, text)
 	parameters :
 		schema_name text	-- the schema where is the table containing plain json submission from the get_submission_from_central() function call
 		table_name text		-- the table containing plain json submission from the get_submission_from_central() function call
+		geojson_columns text -- geojson colmuns to ignore in recursion, comma delimited list like ''geopoint_widget_placementmap,point,ligne,polygone''... depending on your question names
 	
 	returning :
 		void
-		
-	comment :
-		Should accept a "keys_to_ignore" parameter (as for geojson fields we want to keep as geojson).
-		For the moment the function is specific to our naming convention (point, ligne, polygone)
+
 */
 
 CREATE OR REPLACE FUNCTION feed_data_tables_from_central(
 	schema_name text,	-- the schema where is the table containing plain json submission from the get_submission_from_central() function call
 	table_name text,	-- the table containing plain json submission from the get_submission_from_central() function call
-	geojson_columns text -- geojson colmuns to ignore in recursion, comma delimited list like 'point,polygon'... ex. : 'geopoint_widget_placementmap,point,ligne,polygone'
+	geojson_columns text -- geojson colmuns to ignore in recursion, comma delimited list like 'point,polygon'... depending on your question names ex. : 'geopoint_widget_placementmap,point,ligne,polygone'
     )
     RETURNS void
     LANGUAGE 'plpgsql'
@@ -69,8 +67,9 @@ COMMENT ON FUNCTION feed_data_tables_from_central(text,text,text)
 IS 'description : 
 		Feed the tables from key/pair tables. 
 	parameters :
-		schema_name text	-- the schema where is the table containing plain json submission from the get_submission_from_central() function call
-		table_name text		-- the table containing plain json submission from the get_submission_from_central() function call
+		schema_name text	 -- the schema where is the table containing plain json submission from the get_submission_from_central() function call
+		table_name text		 -- the table containing plain json submission from the get_submission_from_central() function call
+		geojson_columns text -- geojson colmuns to ignore in recursion, comma delimited list like ''geopoint_widget_placementmap,point,ligne,polygone''... depending on your question names
 	
 	returning :
 		void

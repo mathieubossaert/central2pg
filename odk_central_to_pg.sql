@@ -10,6 +10,7 @@ FUNCTION: odk_central_to_pg(text, text, text, integer, text, text)
 		project_id integer				-- the Id of the project ex. 4
 		form_id text					-- the name of the Form ex. Sicen
 		destination_schema_name text 	-- the name of the schema where to create the permanent table 
+		geojson_columns text 			-- geojson colmuns to ignore in recursion, comma delimited list like ''geopoint_widget_placementmap,point,ligne,polygone''... depending on your question names
 	
 	returning :
 		void
@@ -60,6 +61,7 @@ COMMENT ON FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, tex
 		project_id integer				-- the Id of the project ex. 4
 		form_id text					-- the name of the Form ex. Sicen
 		destination_schema_name text 	-- the name of the schema where to create the permanent table 
+		geojson_columns text 			-- geojson colmuns to ignore in recursion, comma delimited list like ''geopoint_widget_placementmap,point,ligne,polygone''... depending on your question names
 	
 	returning :
 		void
