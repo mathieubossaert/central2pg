@@ -19,7 +19,8 @@ SELECT odk_central.odk_central_to_pg(
 	'my_central_server.org',
 	2, -- the project id, 
 	'my_form_about_birds',
-	'odk_data'
+	'odk_data',
+	'point_auto,point,ligne,polygone'
 );
 
 -- It now replaces
@@ -46,6 +47,7 @@ This will automatically :
 * ask Central (at my_central_server.org) for the table list of the form "my_form_about_birds"
 * get data for each table
 * create those tables (one text attribute per form question) to stores those data in the schema "odk_data" of my database
+* the last parameter lists the question to ignore in json exploration recusrion (geowidgets columns)
 * feed those tables with the retrieved data
 
 And at next call : 
