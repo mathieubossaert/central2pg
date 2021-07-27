@@ -361,8 +361,7 @@ EXECUTE format('INSERT into '||destination_schema_name||'.'||destination_table_n
 END;
 $BODY$;
 
-COMMENT ON FUNCTION  get_submission_from_central(
-	text,text,text,integer,text,text,text,text,text,text,text)
+COMMENT ON FUNCTION  get_submission_from_central(text,text,text,integer,text,text,text,text)
 	IS 'description :
 		Get json data from Central, feed a temporary table with a generic name central_json_from_central.
 		Once the temp table is created and filled, PG checks if the destination (permanent) table exists. If not PG creates it with only one json column named "value".
@@ -404,7 +403,8 @@ FUNCTION: feed_data_tables_from_central(text, text)
 
 CREATE OR REPLACE FUNCTION feed_data_tables_from_central(
 	schema_name text,	-- the schema where is the table containing plain json submission from the get_submission_from_central() function call
-	table_name text	-- the table containing plain json submission from the get_submission_from_central() function call
+	table_name text,	-- the table containing plain json submission from the get_submission_from_central() function call
+	geojson_columns text -- geojson colmuns to ignore in recursion, comma delimited list like 'point,polygon'... ex. : 'geopoint_widget_placementmap,point,ligne,polygone'
     )
     RETURNS void
     LANGUAGE 'plpgsql'
@@ -432,10 +432,10 @@ EXECUTE format('SET search_path=odk_central,pubic;
 		t.value
 	  FROM doc_key_and_value_recursive,
 		json_each(CASE 
-		  WHEN json_typeof(doc_key_and_value_recursive.value) <> ''object'' OR key IN (''geopoint_widget_placementmap'',''point'',''ligne'',''polygone'') THEN ''{}'' :: JSON
+		  WHEN json_typeof(doc_key_and_value_recursive.value) <> ''object'' OR key = ANY(string_to_array('''||geojson_columns||''','','')) THEN ''{}'' :: JSON
 		  ELSE doc_key_and_value_recursive.value
 		END) AS t
-	)SELECT data_id, key, value FROM doc_key_and_value_recursive WHERE json_typeof(value) <> ''object'' OR key IN (''geopoint_widget_placementmap'',''point'',''ligne'',''polygone'') ORDER BY 2,1;'
+	)SELECT data_id, key, value FROM doc_key_and_value_recursive WHERE json_typeof(value) <> ''object'' OR key = ANY(string_to_array('''||geojson_columns||''','','')) ORDER BY 2,1;'
 );
 				
 EXECUTE format('SELECT dynamic_pivot(''SELECT data_id, key, value FROM data_table ORDER BY 1,2'',''SELECT DISTINCT key FROM data_table ORDER BY 1'',''curseur_central'');
@@ -449,7 +449,7 @@ RAISE INFO 'exiting from feed_data_tables_from_central for table %', table_name;
 END;
 $BODY$;
 
-COMMENT ON FUNCTION feed_data_tables_from_central(text,text)
+COMMENT ON FUNCTION feed_data_tables_from_central(text,text,text)
 IS 'description : 
 		Feed the tables from key/pair tables. 
 	parameters :
@@ -544,7 +544,8 @@ CREATE OR REPLACE FUNCTION odk_central.odk_central_to_pg(
 	central_domain text,
 	project_id integer,
 	form_id text,
-	destination_schema_name text)
+	destination_schema_name text,
+	geojson_columns text)
     RETURNS void
     LANGUAGE 'plpgsql'
     COST 100
@@ -564,15 +565,15 @@ FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password
 
 EXECUTE format('
 SELECT odk_central.feed_data_tables_from_central(
-	'''||destination_schema_name||''',concat(''form_'',lower(form),''_'',lower(split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.''))))))
+	'''||destination_schema_name||''',concat(''form_'',lower(form),''_'',lower(split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.''))))),'''||geojson_columns||''')
 FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
 END;
 $BODY$;
 
-ALTER FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, text, text)
+ALTER FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, text, text, text)
     OWNER TO dba;
 
-COMMENT ON FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, text, text)
+COMMENT ON FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, text, text, text)
     IS 'description :
 		wrap the calling of both get_submission_from_central() and feed_data_tables_from_central() functions 
 	parameters :

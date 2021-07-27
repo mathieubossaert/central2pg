@@ -56,8 +56,7 @@ EXECUTE format('INSERT into '||destination_schema_name||'.'||destination_table_n
 END;
 $BODY$;
 
-COMMENT ON FUNCTION  get_submission_from_central(
-	text,text,text,integer,text,text,text,text,text,text,text)
+COMMENT ON FUNCTION  get_submission_from_central(text,text,text,integer,text,text,text,text)
 	IS 'description :
 		Get json data from Central, feed a temporary table with a generic name central_json_from_central.
 		Once the temp table is created and filled, PG checks if the destination (permanent) table exists. If not PG creates it with only one json column named "value".

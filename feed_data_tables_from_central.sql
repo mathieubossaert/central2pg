@@ -19,7 +19,8 @@ FUNCTION: feed_data_tables_from_central(text, text)
 
 CREATE OR REPLACE FUNCTION feed_data_tables_from_central(
 	schema_name text,	-- the schema where is the table containing plain json submission from the get_submission_from_central() function call
-	table_name text	-- the table containing plain json submission from the get_submission_from_central() function call
+	table_name text,	-- the table containing plain json submission from the get_submission_from_central() function call
+	geojson_columns text -- geojson colmuns to ignore in recursion, comma delimited list like 'point,polygon'... ex. : 'geopoint_widget_placementmap,point,ligne,polygone'
     )
     RETURNS void
     LANGUAGE 'plpgsql'
@@ -47,10 +48,10 @@ EXECUTE format('SET search_path=odk_central,pubic;
 		t.value
 	  FROM doc_key_and_value_recursive,
 		json_each(CASE 
-		  WHEN json_typeof(doc_key_and_value_recursive.value) <> ''object'' OR key IN (''geopoint_widget_placementmap'',''point'',''ligne'',''polygone'') THEN ''{}'' :: JSON
+		  WHEN json_typeof(doc_key_and_value_recursive.value) <> ''object'' OR key = ANY(string_to_array('''||geojson_columns||''','','')) THEN ''{}'' :: JSON
 		  ELSE doc_key_and_value_recursive.value
 		END) AS t
-	)SELECT data_id, key, value FROM doc_key_and_value_recursive WHERE json_typeof(value) <> ''object'' OR key IN (''geopoint_widget_placementmap'',''point'',''ligne'',''polygone'') ORDER BY 2,1;'
+	)SELECT data_id, key, value FROM doc_key_and_value_recursive WHERE json_typeof(value) <> ''object'' OR key = ANY(string_to_array('''||geojson_columns||''','','')) ORDER BY 2,1;'
 );
 				
 EXECUTE format('SELECT dynamic_pivot(''SELECT data_id, key, value FROM data_table ORDER BY 1,2'',''SELECT DISTINCT key FROM data_table ORDER BY 1'',''curseur_central'');
@@ -64,7 +65,7 @@ RAISE INFO 'exiting from feed_data_tables_from_central for table %', table_name;
 END;
 $BODY$;
 
-COMMENT ON FUNCTION feed_data_tables_from_central(text,text)
+COMMENT ON FUNCTION feed_data_tables_from_central(text,text,text)
 IS 'description : 
 		Feed the tables from key/pair tables. 
 	parameters :

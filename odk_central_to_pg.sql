@@ -21,7 +21,8 @@ CREATE OR REPLACE FUNCTION odk_central.odk_central_to_pg(
 	central_domain text,
 	project_id integer,
 	form_id text,
-	destination_schema_name text)
+	destination_schema_name text,
+	geojson_columns text)
     RETURNS void
     LANGUAGE 'plpgsql'
     COST 100
@@ -41,15 +42,15 @@ FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password
 
 EXECUTE format('
 SELECT odk_central.feed_data_tables_from_central(
-	'''||destination_schema_name||''',concat(''form_'',lower(form),''_'',lower(split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.''))))))
+	'''||destination_schema_name||''',concat(''form_'',lower(form),''_'',lower(split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.''))))),'''||geojson_columns||''')
 FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
 END;
 $BODY$;
 
-ALTER FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, text, text)
+ALTER FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, text, text, text)
     OWNER TO dba;
 
-COMMENT ON FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, text, text)
+COMMENT ON FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, text, text, text)
     IS 'description :
 		wrap the calling of both get_submission_from_central() and feed_data_tables_from_central() functions 
 	parameters :
