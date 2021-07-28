@@ -8,7 +8,7 @@ Security issues are for the moment bypassed with the use of -k function, conside
 
 ## How to use it - Example
 
-Simply run [central2pg.sql]](https://github.com/mathieubossaert/central2pg/blob/master/central2pg.sql) script in your database after you checked curl is installed.
+Simply run [[central2pg.sql]](https://github.com/mathieubossaert/central2pg/blob/master/central2pg.sql) script in your database after you checked curl is installed.
 Functions are created in a schema named "odk_central". Adapt it to your needs.
 And start retrieving data from Central.
 
