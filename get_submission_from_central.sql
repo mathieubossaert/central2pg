@@ -48,7 +48,7 @@ EXECUTE (
 		);
 EXECUTE format('COPY central_json_from_central FROM PROGRAM ''curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 --user "'||email||':'||password||'" "'||url||'"'' CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
 EXECUTE format('CREATE TABLE IF NOT EXISTS '||destination_schema_name||'.'||destination_table_name||' (form_data json);');
-EXECUTE format ('CREATE UNIQUE INDEX IF NOT EXISTS '||destination_table_name||'_id_idx
+EXECUTE format ('CREATE UNIQUE INDEX IF NOT EXISTS id_idx_'||destination_table_name||'
     ON '||destination_schema_name||'.'||destination_table_name||' USING btree
     ((form_data ->> ''__id''::text) COLLATE pg_catalog."default" ASC NULLS LAST)
     TABLESPACE pg_default;');

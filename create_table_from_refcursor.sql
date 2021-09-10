@@ -41,8 +41,7 @@ BEGIN
           CREATE TABLE IF NOT EXISTS ' || _schema_name ||'.'|| _table_name || '
           ' || _sql_val;
     EXECUTE (_sql);
-  _sql_index = 'CREATE UNIQUE INDEX IF NOT EXISTS '||replace(_table_name,'.','_')||'_id_idx
-    ON '||_schema_name||'.'||_table_name||' USING btree (data_id)
+  _sql_index = 'CREATE UNIQUE INDEX IF NOT EXISTS idx_'||replace(_table_name,'.','_')||' ON '||_schema_name||'.'||_table_name||' USING btree ("data_id")
     TABLESPACE pg_default;';
     EXECUTE (_sql_index);
 	
