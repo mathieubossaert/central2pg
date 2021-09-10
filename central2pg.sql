@@ -133,8 +133,7 @@ BEGIN
           CREATE TABLE IF NOT EXISTS ' || _schema_name ||'.'|| _table_name || '
           ' || _sql_val;
     EXECUTE (_sql);
-  _sql_index = 'CREATE UNIQUE INDEX IF NOT EXISTS '||replace(_table_name,'.','_')||'_id_idx
-    ON '||_schema_name||'.'||_table_name||' USING btree (data_id)
+  _sql_index = 'CREATE UNIQUE INDEX IF NOT EXISTS idx_'||replace(_table_name,'.','_')||' ON '||_schema_name||'.'||_table_name||' USING btree ("data_id")
     TABLESPACE pg_default;';
     EXECUTE (_sql_index);
 	
@@ -353,7 +352,7 @@ EXECUTE (
 		);
 EXECUTE format('COPY central_json_from_central FROM PROGRAM ''curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 --user "'||email||':'||password||'" "'||url||'"'' CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
 EXECUTE format('CREATE TABLE IF NOT EXISTS '||destination_schema_name||'.'||destination_table_name||' (form_data json);');
-EXECUTE format ('CREATE UNIQUE INDEX IF NOT EXISTS '||destination_table_name||'_id_idx
+EXECUTE format ('CREATE UNIQUE INDEX IF NOT EXISTS id_idx_'||destination_table_name||'
     ON '||destination_schema_name||'.'||destination_table_name||' USING btree
     ((form_data ->> ''__id''::text) COLLATE pg_catalog."default" ASC NULLS LAST)
     TABLESPACE pg_default;');
@@ -560,12 +559,13 @@ EXECUTE format('SELECT odk_central.get_submission_from_central(
 	form,
 	tablename,
 	'''||destination_schema_name||''',
-concat(''form_'',lower(replace(form,''-'',''_'')),''_'',lower(split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.''))))))
+	trim(left(concat(''form_'',lower(replace(form,''-'',''_'')),''_'',lower(split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.''))))),58),''_'')
+	)
 FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
 
 EXECUTE format('
 SELECT odk_central.feed_data_tables_from_central(
-	'''||destination_schema_name||''',concat(''form_'',lower(replace(form,''-'',''_'')),''_'',lower(split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.''))))),'''||geojson_columns||''')
+	'''||destination_schema_name||''',trim(left(concat(''form_'',lower(replace(form,''-'',''_'')),''_'',lower(split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.''))))),58),''_''),'''||geojson_columns||''')
 FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
 END;
 $BODY$;
