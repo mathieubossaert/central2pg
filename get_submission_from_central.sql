@@ -78,3 +78,4 @@ COMMENT ON FUNCTION  get_submission_from_central(text,text,text,integer,text,tex
 	comment : 	
 	future version should use filters... With more parameters
 	Waiting for centra next release (probably May 2021)';
+	

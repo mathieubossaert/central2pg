@@ -38,13 +38,13 @@ EXECUTE format('SELECT odk_central.get_submission_from_central(
 	form,
 	tablename,
 	'''||destination_schema_name||''',
-	trim(left(concat(''form_'',lower(replace(form,''-'',''_'')),''_'',lower(split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.''))))),58),''_'')
+	lower(trim(regexp_replace(left(concat(''form_'',form,''_'',split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.'')))),58), ''[^a-zA-Z\d_]'', ''_'', ''g''),''_''))
 	)
 FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
 
 EXECUTE format('
 SELECT odk_central.feed_data_tables_from_central(
-	'''||destination_schema_name||''',trim(left(concat(''form_'',lower(replace(form,''-'',''_'')),''_'',lower(split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.''))))),58),''_''),'''||geojson_columns||''')
+	'''||destination_schema_name||''',lower(trim(regexp_replace(left(concat(''form_'',form,''_'',split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.'')))),58), ''[^a-zA-Z\d_]'', ''_'', ''g''),''_'')),'''||geojson_columns||''')
 FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
 END;
 $BODY$;

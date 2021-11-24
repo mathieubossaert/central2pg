@@ -40,6 +40,8 @@ BEGIN
   _sql = '
           CREATE TABLE IF NOT EXISTS ' || _schema_name ||'.'|| _table_name || '
           ' || _sql_val;
+          
+-- RAISE INFO 'SQL script for table cration %',_sql; 
     EXECUTE (_sql);
   _sql_index = 'CREATE UNIQUE INDEX IF NOT EXISTS idx_'||replace(_table_name,'.','_')||' ON '||_schema_name||'.'||_table_name||' USING btree ("data_id")
     TABLESPACE pg_default;';
@@ -56,7 +58,8 @@ BEGIN
  WHERE nspname = _schema_name
    AND relkind = 'r' AND pg_class.relname = _table_name AND attnum > 0 AND attname = val.key
 );
-	-- Create new attributes or Run a dummy query if nothing new
+-- Create new attributes or Run a dummy query if nothing new
+-- RAISE INFO 'SQL script for new cols %',_sql_new_cols; 
     EXECUTE (COALESCE(_sql_new_cols,'SELECT true;')); 
  RAISE INFO 'exiting from  create_table_from_refcursor() for table %',_table_name; 
  RAISE INFO 'create_table_from_refcursor(): SQL statement is: %', COALESCE(_sql_new_cols,'no new column to add');
