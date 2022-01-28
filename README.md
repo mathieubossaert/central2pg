@@ -23,23 +23,6 @@ SELECT odk_central.odk_central_to_pg(
 	'point_auto,point,ligne,polygone'	-- columns to ignore in json transformation to database attributes (geojson fields of GeoWidgets)
 );
 
--- It now replaces
-/*
-SELECT odk_central.get_submission_from_central(
-	user_name,
-	pass_word,
-	central_fqdn,
-	project,
-	form,
-	tablename,
-	'odk_central',
-	concat('form_',lower(form),'_',lower(split_part(tablename,'.',cardinality(regexp_split_to_array(tablename,'\.')))))
-)
-FROM odk_central.get_form_tables_list_from_central('me@mydomain.org','PassW0rd','my_central_server.org',	2,'my_form_about_birds');
-
-SELECT odk_central.feed_data_tables_from_central('odk_central',concat('form_',lower(form),'_',lower(split_part(tablename,'.',cardinality(regexp_split_to_array(tablename,'\.'))))))
-FROM odk_central.get_form_tables_list_from_central('me@mydomain.org','PassW0rd','my_central_server.org',	2,'my_form_about_birds');
-*/
 
 ```
 
