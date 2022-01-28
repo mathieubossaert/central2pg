@@ -41,7 +41,7 @@ And at next call :
 ## Complete process
 ```sql
 
-SELECT odk_central.odk_central_to_pg('me@mydomain.org', 'PassW0rd', 'my_central_server.org', 2, 'my_form_about_birds', 'odk_data');
+SELECT odk_central.odk_central_to_pg('me@mydomain.org', 'PassW0rd', 'my_central_server.org', 2, 'my_form_about_birds', 'odk_data','localisation');
 
 /* 
 	This is a view build upon generated data tables for our particular needs. It shows only new data (wich are not already in our internal database)
