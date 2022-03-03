@@ -132,6 +132,8 @@ BEGIN
   _sql = '
           CREATE TABLE IF NOT EXISTS ' || _schema_name ||'.'|| _table_name || '
           ' || _sql_val;
+          
+-- RAISE INFO 'SQL script for table cration %',_sql; 
     EXECUTE (_sql);
   _sql_index = 'CREATE UNIQUE INDEX IF NOT EXISTS idx_'||replace(_table_name,'.','_')||' ON '||_schema_name||'.'||_table_name||' USING btree ("data_id")
     TABLESPACE pg_default;';
@@ -148,7 +150,8 @@ BEGIN
  WHERE nspname = _schema_name
    AND relkind = 'r' AND pg_class.relname = _table_name AND attnum > 0 AND attname = val.key
 );
-	-- Create new attributes or Run a dummy query if nothing new
+-- Create new attributes or Run a dummy query if nothing new
+-- RAISE INFO 'SQL script for new cols %',_sql_new_cols; 
     EXECUTE (COALESCE(_sql_new_cols,'SELECT true;')); 
  RAISE INFO 'exiting from  create_table_from_refcursor() for table %',_table_name; 
  RAISE INFO 'create_table_from_refcursor(): SQL statement is: %', COALESCE(_sql_new_cols,'no new column to add');
@@ -381,7 +384,9 @@ COMMENT ON FUNCTION  get_submission_from_central(text,text,text,integer,text,tex
 
 	comment : 	
 	future version should use filters... With more parameters
-	Waiting for centra next release (probably May 2021)';/*
+	Waiting for centra next release (probably May 2021)';
+	
+/*
 FUNCTION: feed_data_tables_from_central(text, text)
 
 !!! You need to edit and set the correct search_path at the beginig of the EXECUTE statement : SET search_path=odk_central; Replace "odk_central" by the name of the schema where you created the functions !!!
@@ -409,8 +414,13 @@ CREATE OR REPLACE FUNCTION feed_data_tables_from_central(
     VOLATILE PARALLEL UNSAFE
 AS $BODY$
 --declare keys_to_ignore text;
+declare non_empty boolean;
 BEGIN
 
+EXECUTE format('SELECT exists(select 1 FROM %1$s.%2$s)', schema_name, table_name)
+INTO non_empty;
+
+IF non_empty THEN 
 RAISE INFO 'entering feed_data_tables_from_central for table %', table_name; 
 EXECUTE format('SET search_path=odk_central,public;
 	DROP TABLE IF EXISTS data_table;
@@ -442,7 +452,9 @@ EXECUTE format('SELECT dynamic_pivot(''SELECT data_id, key, value FROM data_tabl
 				   	CLOSE "curseur_central"'
 			  );	
 RAISE INFO 'exiting from feed_data_tables_from_central for table %', table_name; 
-
+ELSE
+	RAISE INFO 'table % is empty !', table_name; 
+END IF;
 END;
 $BODY$;
 
@@ -559,19 +571,16 @@ EXECUTE format('SELECT odk_central.get_submission_from_central(
 	form,
 	tablename,
 	'''||destination_schema_name||''',
-	trim(left(concat(''form_'',lower(replace(form,''-'',''_'')),''_'',lower(split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.''))))),58),''_'')
+	lower(trim(regexp_replace(left(concat(''form_'',form,''_'',split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.'')))),58), ''[^a-zA-Z\d_]'', ''_'', ''g''),''_''))
 	)
 FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
 
 EXECUTE format('
 SELECT odk_central.feed_data_tables_from_central(
-	'''||destination_schema_name||''',trim(left(concat(''form_'',lower(replace(form,''-'',''_'')),''_'',lower(split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.''))))),58),''_''),'''||geojson_columns||''')
+	'''||destination_schema_name||''',lower(trim(regexp_replace(left(concat(''form_'',form,''_'',split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.'')))),58), ''[^a-zA-Z\d_]'', ''_'', ''g''),''_'')),'''||geojson_columns||''')
 FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
 END;
 $BODY$;
-
-ALTER FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, text, text, text)
-    OWNER TO dba;
 
 COMMENT ON FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, text, text, text)
     IS 'description :

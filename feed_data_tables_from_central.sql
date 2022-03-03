@@ -26,8 +26,13 @@ CREATE OR REPLACE FUNCTION feed_data_tables_from_central(
     VOLATILE PARALLEL UNSAFE
 AS $BODY$
 --declare keys_to_ignore text;
+declare non_empty boolean;
 BEGIN
 
+EXECUTE format('SELECT exists(select 1 FROM %1$s.%2$s)', schema_name, table_name)
+INTO non_empty;
+
+IF non_empty THEN 
 RAISE INFO 'entering feed_data_tables_from_central for table %', table_name; 
 EXECUTE format('SET search_path=odk_central,public;
 	DROP TABLE IF EXISTS data_table;
@@ -59,7 +64,9 @@ EXECUTE format('SELECT dynamic_pivot(''SELECT data_id, key, value FROM data_tabl
 				   	CLOSE "curseur_central"'
 			  );	
 RAISE INFO 'exiting from feed_data_tables_from_central for table %', table_name; 
-
+ELSE
+	RAISE INFO 'table % is empty !', table_name; 
+END IF;
 END;
 $BODY$;
 
