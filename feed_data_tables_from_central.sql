@@ -84,3 +84,4 @@ IS 'description :
 	comment :
 		Should accept a "keys_to_ignore" parameter (as for geojson fields we want to keep as geojson).
 		For the moment the function is specific to our naming convention (point, ligne, polygone)';
+

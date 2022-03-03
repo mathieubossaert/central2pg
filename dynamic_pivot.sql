@@ -82,3 +82,4 @@ COMMENT ON FUNCTION dynamic_pivot(text, text,refcursor) IS 'description :
 	
 	returning :
 		refcursor';
+

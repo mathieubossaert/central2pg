@@ -90,7 +90,9 @@ COMMENT ON FUNCTION dynamic_pivot(text, text,refcursor) IS 'description :
 		INOUT cname refcursor	-- the name of the cursor
 	
 	returning :
-		refcursor';/*
+		refcursor';
+
+/*
 FUNCTION: create_table_from_refcursor(text, refcursor)
 	description : 
 	-> inspired by https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
@@ -166,7 +168,9 @@ COMMENT ON function create_table_from_refcursor(text,text,refcursor) IS 'descrip
 	_ref refcursor			-- the name of the refcursor to get data from
 	
 	returning :
-	void';/*
+	void';
+
+/*
 FUNCTION: insert_into_from_refcursor(text, text, refcursor)	
 	description :
 	-> adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
@@ -249,7 +253,9 @@ COMMENT ON function insert_into_from_refcursor(text,text,refcursor)IS '
 	returning :
 	void
 	
--> is adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381';/*
+-> is adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381';
+
+/*
 FUNCTION: get_form_tables_list_from_central(text, text, text, integer, text)
 	description :
 		Returns the lists of "table" composing a form. The "core" one and each one corresponding to each repeat_group.
@@ -305,7 +311,9 @@ COMMENT ON FUNCTION get_form_tables_list_from_central(text, text, text, integer,
 		form_id text			-- the name of the Form ex. Sicen
 	
 	returning :
-		TABLE(user_name text, pass_word text, central_fqdn text, project integer, form text, tablename text)';/*
+		TABLE(user_name text, pass_word text, central_fqdn text, project integer, form text, tablename text)';
+
+/*
 FUNCTION: get_submission_from_central(text, text, text, integer, text, text, text, text, text, text, text)
 	description
 		Get json data from Central, feed a temporary table with a generic name central_json_from_central.
@@ -385,7 +393,7 @@ COMMENT ON FUNCTION  get_submission_from_central(text,text,text,integer,text,tex
 	comment : 	
 	future version should use filters... With more parameters
 	Waiting for centra next release (probably May 2021)';
-	
+
 /*
 FUNCTION: feed_data_tables_from_central(text, text)
 
@@ -471,7 +479,9 @@ IS 'description :
 		
 	comment :
 		Should accept a "keys_to_ignore" parameter (as for geojson fields we want to keep as geojson).
-		For the moment the function is specific to our naming convention (point, ligne, polygone)';/*
+		For the moment the function is specific to our naming convention (point, ligne, polygone)';
+
+/*
 FUNCTION: get_file_from_central(text, text, text, integer, text, text, text, text, text)
 	description :
 		Download each media mentioned in submissions
@@ -531,7 +541,9 @@ COMMENT ON FUNCTION get_file_from_central(text, text, text, integer, text, text,
 		output text				-- filename with extension
 	
 	returning :
-		void';/*
+		void';
+
+/*
 FUNCTION: odk_central_to_pg(text, text, text, integer, text, text)
 	description
 		Retrieve all data from a given form to postgresql tables in the destination_schema.
@@ -597,3 +609,4 @@ COMMENT ON FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, tex
 	returning :
 		void
 ';
+

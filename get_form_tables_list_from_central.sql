@@ -55,3 +55,4 @@ COMMENT ON FUNCTION get_form_tables_list_from_central(text, text, text, integer,
 	
 	returning :
 		TABLE(user_name text, pass_word text, central_fqdn text, project integer, form text, tablename text)';
+

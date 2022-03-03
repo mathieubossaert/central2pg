@@ -59,3 +59,4 @@ COMMENT ON FUNCTION get_file_from_central(text, text, text, integer, text, text,
 	
 	returning :
 		void';
+

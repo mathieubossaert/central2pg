@@ -75,3 +75,4 @@ COMMENT ON function create_table_from_refcursor(text,text,refcursor) IS 'descrip
 	
 	returning :
 	void';
+
