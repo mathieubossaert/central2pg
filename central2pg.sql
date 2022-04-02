@@ -7,6 +7,76 @@ CREATE SCHEMA IF NOT EXISTS odk_central;
 SET SEARCH_PATH TO odk_central;
 
 
+-- Table: odk_central.central_authentication_tokens
+
+-- DROP TABLE IF EXISTS odk_central.central_authentication_tokens;
+
+CREATE TABLE IF NOT EXISTS odk_central.central_authentication_tokens
+(
+    url text COLLATE pg_catalog."default" NOT NULL,
+    central_token text COLLATE pg_catalog."default",
+    expiration timestamp with time zone,
+    CONSTRAINT central_authentication_tokens_pkey PRIMARY KEY (url)
+)
+-- FUNCTION: odk_central.get_fresh_token_from_central(text, text, text)
+
+-- DROP FUNCTION IF EXISTS odk_central.get_fresh_token_from_central(text, text, text);
+
+CREATE OR REPLACE FUNCTION get_fresh_token_from_central(
+	email text,
+	password text,
+	central_domain text)
+    RETURNS TABLE(url text, central_token text, expiration timestamp with time zone) 
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+    ROWS 1000
+
+AS $BODY$
+declare url text;
+declare requete text;
+BEGIN
+requete = concat('curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -H "Content-Type: application/json" -H "Accept: application/json" -X POST -d ''''{"email":"',email,'","password":"',password,'"}'''' https://',central_domain,'/v1/sessions');
+
+EXECUTE (
+		'DROP TABLE IF EXISTS central_token;
+		 CREATE TEMP TABLE central_token(form_data json);'
+		);
+
+EXECUTE format('COPY central_token FROM PROGRAM '''||requete||''' CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
+RETURN QUERY EXECUTE 
+FORMAT('INSERT INTO central_authentication_tokens(url, central_token, expiration)
+	   SELECT '''||central_domain||''' as url, form_data->>''token'' as central_token, (form_data->>''expiresAt'')::timestamp with time zone as expiration FROM central_token 
+	   ON CONFLICT(url) DO UPDATE SET central_token = EXCLUDED.central_token, expiration = EXCLUDED.expiration
+	   RETURNING *;');
+END;
+$BODY$;-- FUNCTION: odk_central.get_token_from_central(text, text, text)
+
+-- DROP FUNCTION IF EXISTS odk_central.get_token_from_central(text, text, text);
+
+CREATE OR REPLACE FUNCTION get_token_from_central(
+	_email text,
+	_password text,
+	_central_domain text)
+    RETURNS text
+    LANGUAGE 'sql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+AS $BODY$
+WITH tokens AS (SELECT url, central_token, expiration
+	FROM odk_central.central_authentication_tokens
+	WHERE url = _central_domain
+	UNION 
+	SELECT _central_domain,null,'1975-12-01'::timestamp with time zone),
+more_recent_token AS (
+SELECT url, central_token, expiration
+FROM tokens ORDER BY expiration DESC LIMIT 1)
+SELECT CASE 
+	WHEN expiration >= now()::timestamp with time zone THEN central_token 
+	ELSE (Select central_token FROM odk_central.get_fresh_token_from_central(_email, _password, _central_domain)) 
+END as jeton 
+	   FROM more_recent_token
+$BODY$;
 /*
 FUNCTION: dynamic_pivot(text, text, refcursor)
 	description :
@@ -293,7 +363,7 @@ EXECUTE (
 		'DROP TABLE IF EXISTS central_json_from_central;
 		 CREATE TEMP TABLE central_json_from_central(form_data json);'
 		);
-EXECUTE format('COPY central_json_from_central FROM PROGRAM ''curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 --user "'||email||':'||password||'" "'||url||'"'' CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
+EXECUTE format('COPY central_json_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET '||url||' -H "Accept: application/json" -H ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' $$ CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
 RETURN QUERY EXECUTE 
 FORMAT('WITH data AS (SELECT json_array_elements(form_data -> ''value'') AS form_data FROM central_json_from_central)
 	   SELECT '''||email||''' as user_name, '''||password||''' as pass_word, '''||central_domain||''' as central_fqdn, '||project_id||' as project, '''||form_id||''' as form, (form_data ->> ''name'') AS table_name FROM data;');
@@ -361,7 +431,8 @@ EXECUTE (
 		'DROP TABLE IF EXISTS central_json_from_central;
 		 CREATE TEMP TABLE central_json_from_central(form_data json);'
 		);
-EXECUTE format('COPY central_json_from_central FROM PROGRAM ''curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 --user "'||email||':'||password||'" "'||url||'"'' CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
+EXECUTE format('COPY central_json_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET '||url||' -H "Accept: application/json" -H ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' $$ CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
+
 EXECUTE format('CREATE TABLE IF NOT EXISTS '||destination_schema_name||'.'||destination_table_name||' (form_data json);');
 EXECUTE format ('CREATE UNIQUE INDEX IF NOT EXISTS id_idx_'||destination_table_name||'
     ON '||destination_schema_name||'.'||destination_table_name||' USING btree
@@ -481,37 +552,20 @@ IS 'description :
 		Should accept a "keys_to_ignore" parameter (as for geojson fields we want to keep as geojson).
 		For the moment the function is specific to our naming convention (point, ligne, polygone)';
 
-/*
-FUNCTION: get_file_from_central(text, text, text, integer, text, text, text, text, text)
-	description :
-		Download each media mentioned in submissions
-	
-	parameters :
-		email text				-- the login (email adress) of a user who can get submissions
-		password text			-- his password
-		central_domain text 	-- ODK Central fqdn : central.mydomain.org
-		project_id integer		-- the Id of the project ex. 4
-		form_id text			-- the name of the Form ex. Sicen
-		submission_id text
-		image text				-- the image name mentionned in the submission ex. 1611941389030.jpg
-		destination text		-- Where you want curl to store the file (path to directory)
-		output text				-- filename with extension
-	
-	returning :
-		void
-*/
+-- FUNCTION: get_file_from_central(text, text, text, integer, text, text, text, text, text)
+
+-- DROP FUNCTION IF EXISTS get_file_from_central(text, text, text, integer, text, text, text, text, text);
 
 CREATE OR REPLACE FUNCTION get_file_from_central(
-	email text,				
-	password text,			
-	central_domain text, 	
-	project_id integer,		
-	form_id text,			
-	submission_id text,     
-	image text,				
-	destination text,		
-	output text				
-	)
+	email text,
+	password text,
+	central_domain text,
+	project_id integer,
+	form_id text,
+	submission_id text,
+	image text,
+	destination text,
+	output text)
     RETURNS void
     LANGUAGE 'plpgsql'
     COST 100
@@ -522,11 +576,15 @@ BEGIN
 url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'/Submissions/',submission_id,'/attachments/',image);
 EXECUTE format('DROP TABLE IF EXISTS central_media_from_central;');
 EXECUTE format('CREATE TEMP TABLE central_media_from_central(reponse text);');
-EXECUTE format('COPY central_media_from_central FROM PROGRAM ''curl --insecure --max-time 30 --user "'||email||':'||password||'" -o '||destination||'/'||output||' "'||url||'"'';');
+EXECUTE format('COPY central_json_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET '||url||' -o '||destination||'/'||output||' -H "Accept: application/json" -H ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' $$ ;');
 END;
 $BODY$;
 
-COMMENT ON FUNCTION get_file_from_central(text, text, text, integer, text, text, text, text, text) IS 'description :
+ALTER FUNCTION get_file_from_central(text, text, text, integer, text, text, text, text, text)
+    OWNER TO dba;
+
+COMMENT ON FUNCTION get_file_from_central(text, text, text, integer, text, text, text, text, text)
+    IS 'description :
 		Download each media mentioned in submissions
 	
 	parameters :
@@ -542,7 +600,6 @@ COMMENT ON FUNCTION get_file_from_central(text, text, text, integer, text, text,
 	
 	returning :
 		void';
-
 /*
 FUNCTION: odk_central_to_pg(text, text, text, integer, text, text)
 	description
@@ -561,7 +618,7 @@ FUNCTION: odk_central_to_pg(text, text, text, integer, text, text)
 		void
 */
 
-CREATE OR REPLACE FUNCTION odk_central.odk_central_to_pg(
+CREATE OR REPLACE FUNCTION odk_central_to_pg(
 	email text,
 	password text,
 	central_domain text,
@@ -594,7 +651,7 @@ FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password
 END;
 $BODY$;
 
-COMMENT ON FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, text, text, text)
+COMMENT ON FUNCTION odk_central_to_pg(text, text, text, integer, text, text, text)
     IS 'description :
 		wrap the calling of both get_submission_from_central() and feed_data_tables_from_central() functions 
 	parameters :

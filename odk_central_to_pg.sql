@@ -16,7 +16,7 @@ FUNCTION: odk_central_to_pg(text, text, text, integer, text, text)
 		void
 */
 
-CREATE OR REPLACE FUNCTION odk_central.odk_central_to_pg(
+CREATE OR REPLACE FUNCTION odk_central_to_pg(
 	email text,
 	password text,
 	central_domain text,
@@ -49,7 +49,7 @@ FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password
 END;
 $BODY$;
 
-COMMENT ON FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, text, text, text)
+COMMENT ON FUNCTION odk_central_to_pg(text, text, text, integer, text, text, text)
     IS 'description :
 		wrap the calling of both get_submission_from_central() and feed_data_tables_from_central() functions 
 	parameters :
