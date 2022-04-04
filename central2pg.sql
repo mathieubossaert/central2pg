@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS odk_central.central_authentication_tokens
     central_token text COLLATE pg_catalog."default",
     expiration timestamp with time zone,
     CONSTRAINT central_authentication_tokens_pkey PRIMARY KEY (url)
-)
+);
 -- FUNCTION: odk_central.get_fresh_token_from_central(text, text, text)
 
 -- DROP FUNCTION IF EXISTS odk_central.get_fresh_token_from_central(text, text, text);
@@ -39,7 +39,8 @@ BEGIN
 requete = concat('curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -H "Content-Type: application/json" -H "Accept: application/json" -X POST -d ''''{"email":"',email,'","password":"',password,'"}'''' https://',central_domain,'/v1/sessions');
 
 EXECUTE (
-		'DROP TABLE IF EXISTS central_token;
+		'SET search_path=odk_central,public;
+		DROP TABLE IF EXISTS central_token;
 		 CREATE TEMP TABLE central_token(form_data json);'
 		);
 
@@ -62,7 +63,7 @@ COMMENT ON FUNCTION  get_fresh_token_from_central(text,text,text)
 		central_domain text 			-- ODK Central 
 	
 	returning :
-		void
+		void'
 ;
 -- FUNCTION: odk_central.get_token_from_central(text, text, text)
 
@@ -102,7 +103,7 @@ COMMENT ON FUNCTION  get_token_from_central(text,text,text)
 		central_domain text 			-- ODK Central 
 	
 	returning :
-		void
+		void'
 ;
 /*
 FUNCTION: dynamic_pivot(text, text, refcursor)

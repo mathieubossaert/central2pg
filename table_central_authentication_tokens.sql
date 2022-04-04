@@ -8,4 +8,4 @@ CREATE TABLE IF NOT EXISTS odk_central.central_authentication_tokens
     central_token text COLLATE pg_catalog."default",
     expiration timestamp with time zone,
     CONSTRAINT central_authentication_tokens_pkey PRIMARY KEY (url)
-)
+);

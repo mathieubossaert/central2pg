@@ -36,5 +36,5 @@ COMMENT ON FUNCTION  get_token_from_central(text,text,text)
 		central_domain text 			-- ODK Central 
 	
 	returning :
-		void
+		void'
 ;
