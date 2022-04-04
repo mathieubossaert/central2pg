@@ -50,7 +50,21 @@ FORMAT('INSERT INTO central_authentication_tokens(url, central_token, expiration
 	   ON CONFLICT(url) DO UPDATE SET central_token = EXCLUDED.central_token, expiration = EXCLUDED.expiration
 	   RETURNING *;');
 END;
-$BODY$;-- FUNCTION: odk_central.get_token_from_central(text, text, text)
+$BODY$;
+
+COMMENT ON FUNCTION  get_fresh_token_from_central(text,text,text)
+	IS 'description :
+		Ask central for a new fresh token for the given Cenyral server with given login and password. And update the database token table with it.
+		
+	parameters :
+		email text						-- the login (email adress) of a user who can get submissions
+		password text					-- his password
+		central_domain text 			-- ODK Central 
+	
+	returning :
+		void
+;
+-- FUNCTION: odk_central.get_token_from_central(text, text, text)
 
 -- DROP FUNCTION IF EXISTS odk_central.get_token_from_central(text, text, text);
 
@@ -77,6 +91,19 @@ SELECT CASE
 END as jeton 
 	   FROM more_recent_token
 $BODY$;
+
+COMMENT ON FUNCTION  get_token_from_central(text,text,text)
+	IS 'description :
+		Return a valid token, from the database id it exists and is still valid, or ask a new one (calling get_fresh_token_from_central(text,texttext) function) from ODK Cntral and then update the token table in the database.
+	
+	parameters :
+		email text						-- the login (email adress) of a user who can get submissions
+		password text					-- his password
+		central_domain text 			-- ODK Central 
+	
+	returning :
+		void
+;
 /*
 FUNCTION: dynamic_pivot(text, text, refcursor)
 	description :

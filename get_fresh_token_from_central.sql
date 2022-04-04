@@ -31,3 +31,16 @@ FORMAT('INSERT INTO central_authentication_tokens(url, central_token, expiration
 	   RETURNING *;');
 END;
 $BODY$;
+
+COMMENT ON FUNCTION  get_fresh_token_from_central(text,text,text)
+	IS 'description :
+		Ask central for a new fresh token for the given Cenyral server with given login and password. And update the database token table with it.
+		
+	parameters :
+		email text						-- the login (email adress) of a user who can get submissions
+		password text					-- his password
+		central_domain text 			-- ODK Central 
+	
+	returning :
+		void
+;

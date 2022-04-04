@@ -25,3 +25,16 @@ SELECT CASE
 END as jeton 
 	   FROM more_recent_token
 $BODY$;
+
+COMMENT ON FUNCTION  get_token_from_central(text,text,text)
+	IS 'description :
+		Return a valid token, from the database id it exists and is still valid, or ask a new one (calling get_fresh_token_from_central(text,texttext) function) from ODK Cntral and then update the token table in the database.
+	
+	parameters :
+		email text						-- the login (email adress) of a user who can get submissions
+		password text					-- his password
+		central_domain text 			-- ODK Central 
+	
+	returning :
+		void
+;
