@@ -235,7 +235,7 @@ BEGIN
           
 -- RAISE INFO 'SQL script for table cration %',_sql; 
     EXECUTE (_sql);
-  _sql_index = 'CREATE UNIQUE INDEX IF NOT EXISTS idx_'||replace(_table_name,'.','_')||' ON '||_schema_name||'.'||_table_name||' USING btree ("data_id")
+  _sql_index = 'CREATE UNIQUE INDEX IF NOT EXISTS idx_'||left(md5(random()::text),20)||' ON '||_schema_name||'.'||_table_name||' USING btree ("data_id")
     TABLESPACE pg_default;';
     EXECUTE (_sql_index);
 	
@@ -462,7 +462,7 @@ EXECUTE (
 EXECUTE format('COPY central_json_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET '||url||' -H "Accept: application/json" -H ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' $$ CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
 
 EXECUTE format('CREATE TABLE IF NOT EXISTS '||destination_schema_name||'.'||destination_table_name||' (form_data json);');
-EXECUTE format ('CREATE UNIQUE INDEX IF NOT EXISTS idx_'||destination_table_name||'
+EXECUTE format ('CREATE UNIQUE INDEX IF NOT EXISTS idx_'||left(md5(random()::text),20)||'
     ON '||destination_schema_name||'.'||destination_table_name||' USING btree
     ((form_data ->> ''__id''::text) COLLATE pg_catalog."default" ASC NULLS LAST)
     TABLESPACE pg_default;');

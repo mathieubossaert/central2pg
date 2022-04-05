@@ -43,7 +43,7 @@ BEGIN
           
 -- RAISE INFO 'SQL script for table cration %',_sql; 
     EXECUTE (_sql);
-  _sql_index = 'CREATE UNIQUE INDEX IF NOT EXISTS idx_'||replace(_table_name,'.','_')||' ON '||_schema_name||'.'||_table_name||' USING btree ("data_id")
+  _sql_index = 'CREATE UNIQUE INDEX IF NOT EXISTS idx_'||left(md5(random()::text),20)||' ON '||_schema_name||'.'||_table_name||' USING btree ("data_id")
     TABLESPACE pg_default;';
     EXECUTE (_sql_index);
 	
