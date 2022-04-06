@@ -608,9 +608,6 @@ EXECUTE format('COPY central_json_from_central FROM PROGRAM $$ curl --insecure -
 END;
 $BODY$;
 
-ALTER FUNCTION get_file_from_central(text, text, text, integer, text, text, text, text, text)
-    OWNER TO dba;
-
 COMMENT ON FUNCTION get_file_from_central(text, text, text, integer, text, text, text, text, text)
     IS 'description :
 		Download each media mentioned in submissions
