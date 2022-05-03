@@ -6,6 +6,10 @@ Fonctions pl/pgsql de récupération des données d'ODK central vers une base de
 Those functions make use of the "COPY FROM PROGRAM" PostgreSQL capability. The called program is curl. So curl need to be installed on your database server.
 Security issues are for the moment bypassed with the use of -k function, considering we know the server called by curl.
 
+central2pg functions need to be installed in the destination database, which will ask central for data.
+
+![central2pg_in_the_data_flow](https://user-images.githubusercontent.com/1642645/165459944-a8bfe56e-6cf3-410d-b337-70fe6d1e5ef3.png)
+
 ## How to use it - Example
 
 Simply run [central2pg.sql](https://github.com/mathieubossaert/central2pg/blob/master/central2pg.sql) script in your database after you checked curl is installed.
