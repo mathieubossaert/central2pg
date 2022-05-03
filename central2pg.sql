@@ -692,3 +692,140 @@ COMMENT ON FUNCTION odk_central_to_pg(text, text, text, integer, text, text, tex
 		void
 ';
 
+-- FUNCTION: odk_central.get_form_version(text, text, text, integer, text)
+
+-- DROP FUNCTION IF EXISTS odk_central.get_form_version(text, text, text, integer, text);
+
+CREATE OR REPLACE FUNCTION odk_central.get_form_version(
+	email text,
+	password text,
+	central_domain text,
+	project_id integer,
+	form_id text)
+    RETURNS text
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+AS $BODY$
+declare url text;
+declare current_version text;
+BEGIN
+url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id);
+EXECUTE (
+		'DROP TABLE IF EXISTS form_version;
+		 CREATE TEMP TABLE form_version(form_data json);'
+		);
+EXECUTE format('COPY form_version FROM PROGRAM $$ curl --insecure --header ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' '''||url||''' $$ ;');
+SELECT form_data->>'version' INTO current_version FROM form_version;
+RETURN current_version;
+END;
+$BODY$;
+
+
+COMMENT ON FUNCTION odk_central.get_form_version(text, text, text, integer, text, text)
+    IS 'description :
+	returning :
+	';
+	
+-- FUNCTION: odk_central.create_draft(text, text, text, integer, text)
+
+-- DROP FUNCTION IF EXISTS odk_central.create_draft(text, text, text, integer, text);
+
+CREATE OR REPLACE FUNCTION odk_central.create_draft(
+	email text,
+	password text,
+	central_domain text,
+	project_id integer,
+	form_id text)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+AS $BODY$
+declare url text;
+declare requete text;
+BEGIN
+url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'/draft?ignoreWarnings=true');
+EXECUTE (
+		'DROP TABLE IF EXISTS media_to_central;
+		 CREATE TEMP TABLE media_to_central(form_data text);'
+		);
+EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl  --insecure --include --request POST --header ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' --header "Content-Type:" --data-binary "" '''||url||''' $$ ;');
+
+END;
+$BODY$;
+
+COMMENT ON FUNCTION odk_central.create_draft(text, text, text, integer, text)
+    IS 'description :
+	returning :
+	';
+
+-- FUNCTION: odk_central.push_json_media_to_central(text, text, text, integer, text, text, text)
+
+-- DROP FUNCTION IF EXISTS odk_central.push_json_media_to_central(text, text, text, integer, text, text, text);
+
+CREATE OR REPLACE FUNCTION odk_central.push_json_media_to_central(
+	email text,
+	password text,
+	central_domain text,
+	project_id integer,
+	form_id text,
+	chemin_vers_media text,
+	nom_media text)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+AS $BODY$
+declare url text;
+declare requete text;
+BEGIN
+url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'/draft/attachments/',nom_media);
+EXECUTE (
+		'DROP TABLE IF EXISTS media_to_central;
+		 CREATE TEMP TABLE media_to_central(form_data text);'
+		);
+EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl --insecure --request POST --header ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' --header "Content-Type: application/geojson" --data-binary "@'||chemin_vers_media||'/'||nom_media||'" '''||url||''' $$ ;');
+
+END;
+$BODY$;
+
+COMMENT ON FUNCTION odk_central.push_json_media_to_central(text, text, text, integer, text, text, text)
+    IS 'description :
+	returning :';
+	
+	
+-- FUNCTION: odk_central.publish_form_version(text, text, text, integer, text, integer)
+
+-- DROP FUNCTION IF EXISTS odk_central.publish_form_version(text, text, text, integer, text, integer);
+
+CREATE OR REPLACE FUNCTION odk_central.publish_form_version(
+	email text,
+	password text,
+	central_domain text,
+	project_id integer,
+	form_id text,
+	version_number integer)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+AS $BODY$
+declare url text;
+declare requete text;
+BEGIN
+url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'/draft/publish?version=',version_number);
+EXECUTE (
+		'DROP TABLE IF EXISTS media_to_central;
+		 CREATE TEMP TABLE media_to_central(form_data text);'
+		);
+EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl --insecure --include --request POST --header ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' '''||url||''' $$ ;');
+
+END;
+$BODY$;
+
+
+COMMENT ON FUNCTION odk_central.publish_form_version(text, text, text, integer, text, integer)
+    IS 'description :
+	returning :
+	';
