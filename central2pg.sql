@@ -823,9 +823,7 @@ EXECUTE (
 		 CREATE TEMP TABLE media_to_central(form_data text);'
 		);
 EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl --insecure --include --request POST --header ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' '''||url||''' $$ ;');
-/*
-curl --include --request POST --header 'Authorization: Bearer azertyuiopqsdfgh' 'https://myodk.server.fr/v1/projects/3/forms/select_from_geojson/draft/publish?version=2022040717'
-*/
+
 END;
 $BODY$;
 

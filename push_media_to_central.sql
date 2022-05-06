@@ -9,7 +9,8 @@ CREATE OR REPLACE FUNCTION odk_central.push_media_to_central(
 	project_id integer,
 	form_id text,
 	media_path text,
-	media_name text -- must end by .xml or .geojson or .csv)
+	media_name text -- must end by .xml or .geojson or .csv
+	)
     RETURNS void
     LANGUAGE 'plpgsql'
     COST 100
