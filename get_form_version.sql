@@ -28,7 +28,7 @@ END;
 $BODY$;
 
 
-COMMENT ON FUNCTION odk_central.get_form_version(text, text, text, integer, text, text)
+COMMENT ON FUNCTION odk_central.get_form_version(text, text, text, integer, text)
     IS 'description :
 	returning :
 	';
