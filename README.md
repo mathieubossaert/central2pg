@@ -1,7 +1,7 @@
 # Central2PG
-## PostgreSQL's functions to retrieve datas from ODK Central's OData API to a PostgreSQL database 
+## PostgreSQL set of functions to interact with ODK Central's trough its ODATA API for data retrieval and form management (updating)
 
-Fonctions pl/pgsql de récupération des données d'ODK central vers une base de données PostgreSQL
+Fonctions PostgreSQL pemrettant d'interragir avec un serveir ODK Central à travers son API ODATA, pour la récupération des données et la gestion (mise à jour de formulaires)
 
 Those functions make use of the "COPY FROM PROGRAM" PostgreSQL capability. The called program is curl. So curl need to be installed on your database server.
 Security issues are for the moment bypassed with the use of -k function, considering we know the server called by curl.
@@ -72,4 +72,9 @@ WHERE image IS NOT NULL;
 
 ## Short french demo with english subtitles
 https://www.youtube.com/watch?v=Z4rY1ejNlW0&t
+
+## Use cases
+https://forum.getodk.org/t/odk-to-postgresql-to-nearly-live-webmap/36973
+
+https://forum.getodk.org/t/updating-external-datasets-from-another-forms-submissions-data-from-within-a-postgresql-database/37596?u=mathieubossaert
 
