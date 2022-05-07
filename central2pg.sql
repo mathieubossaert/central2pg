@@ -1,26 +1,63 @@
 /*
-   change schema name odk_central
-   on two firts lines to what you want
-Do the same for "SET search_path=odk_central;" statement in the feed_data_tables_from_central(text,text) function
+Change schema name odk_central on two firts lines to what you want
+Do the same for "SET search_path=odk_central,public;" statement in both feed_data_tables_from_central(text,text) and get_fresh_token_from_central(text, text, text) function.
 */
 CREATE SCHEMA IF NOT EXISTS odk_central;
 SET SEARCH_PATH TO odk_central;
 
 
--- Table: odk_central.central_authentication_tokens
 
--- DROP TABLE IF EXISTS odk_central.central_authentication_tokens;
+/*
+TABLE: central_authentication_tokens(text, text, text)
 
-CREATE TABLE IF NOT EXISTS odk_central.central_authentication_tokens
+	description :
+		Table to store Authentication token for several central servers
+		
+	attributes :
+		url text							-- Central server FQDN
+		central_token text					-- The last token from this Central server
+		expiration timestamp with time zone	-- valid until this timestamp
+		
+	comment :
+		to be done : add user specific tokens
+
+*/
+
+CREATE TABLE IF NOT EXISTS central_authentication_tokens
 (
     url text COLLATE pg_catalog."default" NOT NULL,
     central_token text COLLATE pg_catalog."default",
     expiration timestamp with time zone,
     CONSTRAINT central_authentication_tokens_pkey PRIMARY KEY (url)
 );
--- FUNCTION: odk_central.get_fresh_token_from_central(text, text, text)
 
--- DROP FUNCTION IF EXISTS odk_central.get_fresh_token_from_central(text, text, text);
+COMMENT ON TABLE  central_authentication_tokens 
+	IS 'description :
+		Table to store Authentication token for several central servers
+		
+	attributes :
+		url text							-- Central server FQDN
+		central_token text					-- The last token from this Central server
+		expiration timestamp with time zone	-- valid until this timestamp
+		
+	comment :
+		to be done : add user specific tokens';
+
+
+/*
+FUNCTION: get_fresh_token_from_central(text, text, text)
+
+	description :
+		Ask central for a new fresh token for the given Central server with given login and password. And update the database token table with it.
+		
+	parameters :
+		email text						-- the login (email adress) of a user who can get submissions
+		password text					-- his password
+		central_domain text 			-- ODK Central FQDN
+	
+	returning :
+		void
+*/
 
 CREATE OR REPLACE FUNCTION get_fresh_token_from_central(
 	email text,
@@ -55,19 +92,32 @@ $BODY$;
 
 COMMENT ON FUNCTION  get_fresh_token_from_central(text,text,text)
 	IS 'description :
-		Ask central for a new fresh token for the given Cenyral server with given login and password. And update the database token table with it.
+		Ask central for a new fresh token for the given Central server with given login and password. And update the database token table with it.
 		
+	parameters :
+		email text						-- the login (email adress) of a user who can get submissions
+		password text					-- his password
+		central_domain text 			-- ODK Central FQDN
+	
+	returning :
+		void'
+;
+
+
+/*
+FUNCTION: get_token_from_central(text, text, text)	
+
+	description :
+		Return a valid token, from the database id it exists and is still valid, or ask a new one (calling get_fresh_token_from_central(text,texttext) function) from ODK Central and then update the token table in the database.
+	
 	parameters :
 		email text						-- the login (email adress) of a user who can get submissions
 		password text					-- his password
 		central_domain text 			-- ODK Central 
 	
 	returning :
-		void'
-;
--- FUNCTION: odk_central.get_token_from_central(text, text, text)
-
--- DROP FUNCTION IF EXISTS odk_central.get_token_from_central(text, text, text);
+		void
+*/
 
 CREATE OR REPLACE FUNCTION get_token_from_central(
 	_email text,
@@ -79,7 +129,7 @@ CREATE OR REPLACE FUNCTION get_token_from_central(
     VOLATILE PARALLEL UNSAFE
 AS $BODY$
 WITH tokens AS (SELECT url, central_token, expiration
-	FROM odk_central.central_authentication_tokens
+	FROM central_authentication_tokens
 	WHERE url = _central_domain
 	UNION 
 	SELECT _central_domain,null,'1975-12-01'::timestamp with time zone),
@@ -88,14 +138,14 @@ SELECT url, central_token, expiration
 FROM tokens ORDER BY expiration DESC LIMIT 1)
 SELECT CASE 
 	WHEN expiration >= now()::timestamp with time zone THEN central_token 
-	ELSE (Select central_token FROM odk_central.get_fresh_token_from_central(_email, _password, _central_domain)) 
+	ELSE (Select central_token FROM get_fresh_token_from_central(_email, _password, _central_domain)) 
 END as jeton 
 	   FROM more_recent_token
 $BODY$;
 
 COMMENT ON FUNCTION  get_token_from_central(text,text,text)
 	IS 'description :
-		Return a valid token, from the database id it exists and is still valid, or ask a new one (calling get_fresh_token_from_central(text,texttext) function) from ODK Cntral and then update the token table in the database.
+		Return a valid token, from the database id it exists and is still valid, or ask a new one (calling get_fresh_token_from_central(text,texttext) function) from ODK Central and then update the token table in the database.
 	
 	parameters :
 		email text						-- the login (email adress) of a user who can get submissions
@@ -105,12 +155,14 @@ COMMENT ON FUNCTION  get_token_from_central(text,text,text)
 	returning :
 		void'
 ;
+
+
 /*
 FUNCTION: dynamic_pivot(text, text, refcursor)
 	description :
 		-> adapted from https://postgresql.verite.pro/blog/2018/06/19/crosstab-pivot.html
-		CREATE a pivot table dynamically, withut specifying mannually the row structure.
-		Returns a cursor use by both following finction to create a table and feed it
+		Creates a pivot table dynamically, without specifying mannually the row structure.
+		Returns a cursor use by both following function to create a table and fill it
 	
 	parameters :
 		central_query text 	-- the query defining the data
@@ -179,8 +231,8 @@ $BODY$;
 
 COMMENT ON FUNCTION dynamic_pivot(text, text,refcursor) IS 'description :
 		-> adapted from https://postgresql.verite.pro/blog/2018/06/19/crosstab-pivot.html
-		CREATE a pivot table dynamically, withut specifying mannually the row structure.
-		Returns a cursor use by both following finction to create a table and feed it
+		Creates a pivot table dynamically, without specifying mannually the row structure.
+		Returns a cursor use by both following function to create a table and fill it
 	
 	parameters :
 		central_query text 	-- the query defining the data
@@ -190,11 +242,13 @@ COMMENT ON FUNCTION dynamic_pivot(text, text,refcursor) IS 'description :
 	returning :
 		refcursor';
 
+
 /*
 FUNCTION: create_table_from_refcursor(text, refcursor)
 	description : 
 	-> inspired by https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
-	Create a table corresponding to the curso structure (attribute types and names)
+	Create a table corresponding to the cursor structure (attribute types and names). As json atributes are not typed, all attributes are created as text ones.
+	You'll need to cast each in your subsequent requests.
 	
 	parameters :
 	_table_name text 		-- the name of the table to create
@@ -259,7 +313,8 @@ END;
 $BODY$;
 COMMENT ON function create_table_from_refcursor(text,text,refcursor) IS 'description : 
 	-> inspired by https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
-	Create a table corresponding to the curso structure (attribute types and names)
+	Create a table corresponding to the cursor structure (attribute types and names). As json atributes are not typed, all attributes are created as text ones.
+	You''ll need to cast each in your subsequent requests.
 	
 	parameters :
 	_table_name text 		-- the name of the table to create
@@ -268,19 +323,21 @@ COMMENT ON function create_table_from_refcursor(text,text,refcursor) IS 'descrip
 	returning :
 	void';
 
+
 /*
 FUNCTION: insert_into_from_refcursor(text, text, refcursor)	
+
 	description :
-	-> adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
-	Feed the table with data
+		-> adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
+		Fills the table with data
 	
 	parameters :
-	_schema_name text, 		-- the name of the schema where to create the table
-	_table_name text, 		-- the name of the table to create
-	_ref refcursor			-- the name of the refcursor to get data from
+		_schema_name text, 		-- the name of the schema where to create the table
+		_table_name text, 		-- the name of the table to create
+		_ref refcursor			-- the name of the refcursor to get data from
 	
 	returning :
-	void
+		void
 */
 
 CREATE OR REPLACE FUNCTION insert_into_from_refcursor(
@@ -341,27 +398,26 @@ $BODY$;
 COMMENT ON function insert_into_from_refcursor(text,text,refcursor)IS '	
 	description :
 	-> adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
-	Feed the table with data
+	Fills the table with data
 	
 	parameters :
-	_schema_name text, 		-- the name of the schema where to create the table
-	_table_name text, 		-- the name of the table to create
-	_ref refcursor			-- the name of the refcursor to get data from
+		_schema_name text, 		-- the name of the schema where to create the table
+		_table_name text, 		-- the name of the table to create
+		_ref refcursor			-- the name of the refcursor to get data from
 	
 	returning :
-	void
-	
--> is adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381';
+	void';
+
 
 /*
 FUNCTION: get_form_tables_list_from_central(text, text, text, integer, text)
 	description :
-		Returns the lists of "table" composing a form. The "core" one and each one corresponding to each repeat_group.
+		Returns the lists of "tables" composing a form. The "core" one and each one corresponding to each repeat_group.
 	
 	parameters :
 		email text				-- the login (email adress) of a user who can get submissions
 		password text			-- his password
-		central_domain text 	-- ODK Central fqdn : central.mydomain.org
+		central_domain text 	-- ODK Central FQDN : central.mydomain.org
 		project_id integer		-- the Id of the project ex. 4
 		form_id text			-- the name of the Form ex. Sicen
 	
@@ -391,7 +447,7 @@ EXECUTE (
 		'DROP TABLE IF EXISTS central_json_from_central;
 		 CREATE TEMP TABLE central_json_from_central(form_data json);'
 		);
-EXECUTE format('COPY central_json_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET '||url||' -H "Accept: application/json" -H ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' $$ CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
+EXECUTE format('COPY central_json_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET '||url||' -H "Accept: application/json" -H ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' $$ CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
 RETURN QUERY EXECUTE 
 FORMAT('WITH data AS (SELECT json_array_elements(form_data -> ''value'') AS form_data FROM central_json_from_central)
 	   SELECT '''||email||''' as user_name, '''||password||''' as pass_word, '''||central_domain||''' as central_fqdn, '||project_id||' as project, '''||form_id||''' as form, (form_data ->> ''name'') AS table_name FROM data;');
@@ -411,11 +467,12 @@ COMMENT ON FUNCTION get_form_tables_list_from_central(text, text, text, integer,
 	returning :
 		TABLE(user_name text, pass_word text, central_fqdn text, project integer, form text, tablename text)';
 
+
 /*
 FUNCTION: get_submission_from_central(text, text, text, integer, text, text, text, text, text, text, text)
 	description
 		Get json data from Central, feed a temporary table with a generic name central_json_from_central.
-		Once the temp table is created and filled, PG checks if the destination (permanent) table exists. If not PG creates it with only one json column named "value".
+		Once the temp table is created and filled, PG checks if the destination schema and (permanent) table exist. If not PG creates it with only one json column named "value".
 		PG does the same to check if a unique constraint on the __id exists. This index will be use to ignore subissions already previously inserted in the table, using an "ON CONFLICT xxx DO NOTHING"
 	
 	parameters :
@@ -433,7 +490,6 @@ FUNCTION: get_submission_from_central(text, text, text, integer, text, text, tex
 
 	comment : 	
 	future version should use filters... With more parameters
-	Waiting for centra next release (probably May 2021)
 */
 
 CREATE OR REPLACE FUNCTION get_submission_from_central(
@@ -459,9 +515,10 @@ EXECUTE (
 		'DROP TABLE IF EXISTS central_json_from_central;
 		 CREATE TEMP TABLE central_json_from_central(form_data json);'
 		);
-EXECUTE format('COPY central_json_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET '||url||' -H "Accept: application/json" -H ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' $$ CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
+EXECUTE format('COPY central_json_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET '||url||' -H "Accept: application/json" -H ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' $$ CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
 
-EXECUTE format('CREATE TABLE IF NOT EXISTS '||destination_schema_name||'.'||destination_table_name||' (form_data json);');
+EXECUTE format('CREATE SCHEMA IF NOT EXISTS '||destination_schema_name||';
+CREATE TABLE IF NOT EXISTS '||destination_schema_name||'.'||destination_table_name||' (form_data json);');
 EXECUTE format ('CREATE UNIQUE INDEX IF NOT EXISTS idx_'||left(md5(random()::text),20)||'
     ON '||destination_schema_name||'.'||destination_table_name||' USING btree
     ((form_data ->> ''__id''::text) COLLATE pg_catalog."default" ASC NULLS LAST)
@@ -473,7 +530,7 @@ $BODY$;
 COMMENT ON FUNCTION  get_submission_from_central(text,text,text,integer,text,text,text,text)
 	IS 'description :
 		Get json data from Central, feed a temporary table with a generic name central_json_from_central.
-		Once the temp table is created and filled, PG checks if the destination (permanent) table exists. If not PG creates it with only one json column named "value".
+		Once the temp table is created and filled, PG checks if the destination schema and (permanent) table exists. If not PG creates it with only one json column named "value".
 		PG does the same to check if a unique constraint on the __id exists. This index will be use to ignore subissions already previously inserted in the table, using an "ON CONFLICT xxx DO NOTHING"
 	
 	parameters :
@@ -490,20 +547,19 @@ COMMENT ON FUNCTION  get_submission_from_central(text,text,text,integer,text,tex
 		void
 
 	comment : 	
-	future version should use filters... With more parameters
-	Waiting for centra next release (probably May 2021)';
+	future version should use filters... With more parameters';
+
 
 /*
 FUNCTION: feed_data_tables_from_central(text, text)
 
-!!! You need to edit and set the correct search_path at the beginig of the EXECUTE statement : SET search_path=odk_central; Replace "odk_central" by the name of the schema where you created the functions !!!
-
 	description : 
 		Feed the tables from key/pair tables. 
+	
 	parameters :
-		schema_name text	-- the schema where is the table containing plain json submission from the get_submission_from_central() function call
-		table_name text		-- the table containing plain json submission from the get_submission_from_central() function call
-		geojson_columns text -- geojson colmuns to ignore in recursion, comma delimited list like ''geopoint_widget_placementmap,point,ligne,polygone''... depending on your question names
+		schema_name text		-- the schema where is the table containing plain json submission from the get_submission_from_central() function call
+		table_name text			-- the table containing plain json submission from the get_submission_from_central() function call
+		geojson_columns text 	-- geojson colmuns to ignore in recursion, comma delimited list like ''geopoint_widget_placementmap,point,ligne,polygone''... depending on your question names
 	
 	returning :
 		void
@@ -511,10 +567,10 @@ FUNCTION: feed_data_tables_from_central(text, text)
 */
 
 CREATE OR REPLACE FUNCTION feed_data_tables_from_central(
-	schema_name text,	-- the schema where is the table containing plain json submission from the get_submission_from_central() function call
-	table_name text,	-- the table containing plain json submission from the get_submission_from_central() function call
-	geojson_columns text -- geojson colmuns to ignore in recursion, comma delimited list like 'point,polygon'... depending on your question names ex. : 'geopoint_widget_placementmap,point,ligne,polygone'
-    )
+	schema_name text,
+	table_name text,
+	geojson_columns text
+	)
     RETURNS void
     LANGUAGE 'plpgsql'
     COST 100
@@ -567,22 +623,36 @@ $BODY$;
 
 COMMENT ON FUNCTION feed_data_tables_from_central(text,text,text)
 IS 'description : 
-		Feed the tables from key/pair tables. 
+		Feed the tables from key/pair tables.
+
 	parameters :
 		schema_name text	 -- the schema where is the table containing plain json submission from the get_submission_from_central() function call
 		table_name text		 -- the table containing plain json submission from the get_submission_from_central() function call
 		geojson_columns text -- geojson colmuns to ignore in recursion, comma delimited list like ''geopoint_widget_placementmap,point,ligne,polygone''... depending on your question names
 	
 	returning :
+		void';
+
+
+/*
+FUNCTION: get_form_tables_list_from_central(text, text, text, integer, text)
+	description :
+		Download each media mentioned in submissions
+	
+	parameters :
+		email text				-- the login (email adress) of a user who can get submissions
+		password text			-- his password
+		central_domain text 	-- ODK Central fqdn : central.mydomain.org
+		project_id integer		-- the Id of the project ex. 4
+		form_id text			-- the name of the Form ex. Sicen
+		submission_id text		-- the submission_id
+		image text				-- the image name mentionned in the submission ex. 1611941389030.jpg
+		destination text		-- Where you want curl to store the file (path to directory)
+		output text				-- filename with extension
+	
+	returning :
 		void
-		
-	comment :
-		Should accept a "keys_to_ignore" parameter (as for geojson fields we want to keep as geojson).
-		For the moment the function is specific to our naming convention (point, ligne, polygone)';
-
--- FUNCTION: get_file_from_central(text, text, text, integer, text, text, text, text, text)
-
--- DROP FUNCTION IF EXISTS get_file_from_central(text, text, text, integer, text, text, text, text, text);
+*/
 
 CREATE OR REPLACE FUNCTION get_file_from_central(
 	email text,
@@ -618,26 +688,29 @@ COMMENT ON FUNCTION get_file_from_central(text, text, text, integer, text, text,
 		central_domain text 	-- ODK Central fqdn : central.mydomain.org
 		project_id integer		-- the Id of the project ex. 4
 		form_id text			-- the name of the Form ex. Sicen
-		submission_id text
+		submission_id text		-- the submission_id
 		image text				-- the image name mentionned in the submission ex. 1611941389030.jpg
 		destination text		-- Where you want curl to store the file (path to directory)
 		output text				-- filename with extension
 	
 	returning :
 		void';
+
+
 /*
 FUNCTION: odk_central_to_pg(text, text, text, integer, text, text)
-	description
-		Retrieve all data from a given form to postgresql tables in the destination_schema.
-	
+
+	description :
+		Wraps the calling of both get_submission_from_central() and feed_data_tables_from_central() functions 
+		
 	parameters :
 		email text						-- the login (email adress) of a user who can get submissions
 		password text					-- his password
-		central_domain text 			-- ODK Central fqdn : central.mydomain.org
+		central_domain text 			-- ODK Central FQDN : central.mydomain.org
 		project_id integer				-- the Id of the project ex. 4
 		form_id text					-- the name of the Form ex. Sicen
 		destination_schema_name text 	-- the name of the schema where to create the permanent table 
-		geojson_columns text 			-- geojson colmuns to ignore in recursion, comma delimited list like ''geopoint_widget_placementmap,point,ligne,polygone''... depending on your question names
+		geojson_columns text 			-- geojson colmuns to ignore in recursion, comma delimited list like ''geopoint_widget_placementmap,point,ligne,polygone'', depending on your question names. /!\ Beware of spaces ! /!\
 	
 	returning :
 		void
@@ -657,46 +730,59 @@ CREATE OR REPLACE FUNCTION odk_central_to_pg(
     VOLATILE PARALLEL UNSAFE
 AS $BODY$
 BEGIN
-EXECUTE format('SELECT odk_central.get_submission_from_central(
+EXECUTE format('SELECT get_submission_from_central(
 	user_name,
 	pass_word,
-	central_fqdn,
+	central_FQDN,
 	project,
 	form,
 	tablename,
 	'''||destination_schema_name||''',
 	lower(trim(regexp_replace(left(concat(''form_'',form,''_'',split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.'')))),58), ''[^a-zA-Z\d_]'', ''_'', ''g''),''_''))
 	)
-FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
+FROM get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
 
 EXECUTE format('
-SELECT odk_central.feed_data_tables_from_central(
+SELECT feed_data_tables_from_central(
 	'''||destination_schema_name||''',lower(trim(regexp_replace(left(concat(''form_'',form,''_'',split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.'')))),58), ''[^a-zA-Z\d_]'', ''_'', ''g''),''_'')),'''||geojson_columns||''')
-FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
+FROM get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
 END;
 $BODY$;
 
 COMMENT ON FUNCTION odk_central_to_pg(text, text, text, integer, text, text, text)
     IS 'description :
-		wrap the calling of both get_submission_from_central() and feed_data_tables_from_central() functions 
+		wraps the calling of both get_submission_from_central() and feed_data_tables_from_central() functions 
+		
+	parameters :
+		email text						-- the login (email adress) of a user who can get submissions
+		password text					-- his password
+		central_domain text 			-- ODK Central FQDN : central.mydomain.org
+		project_id integer				-- the Id of the project ex. 4
+		form_id text					-- the name of the Form ex. Sicen
+		destination_schema_name text 	-- the name of the schema where to create the permanent table 
+		geojson_columns text 			-- geojson colmuns to ignore in recursion, comma delimited list like ''geopoint_widget_placementmap,point,ligne,polygone'', depending on your question names. /!\ Beware of spaces ! /!\
+	
+	returning :
+		void';
+
+
+/*
+FUNCTION: get_form_version(text, text, text, integer, text)
+	description
+		Asks central for the current version of the given form.
+	
 	parameters :
 		email text						-- the login (email adress) of a user who can get submissions
 		password text					-- his password
 		central_domain text 			-- ODK Central fqdn : central.mydomain.org
 		project_id integer				-- the Id of the project ex. 4
 		form_id text					-- the name of the Form ex. Sicen
-		destination_schema_name text 	-- the name of the schema where to create the permanent table 
-		geojson_columns text 			-- geojson colmuns to ignore in recursion, comma delimited list like ''geopoint_widget_placementmap,point,ligne,polygone''... depending on your question names
 	
 	returning :
 		void
-';
+*/
 
--- FUNCTION: odk_central.get_form_version(text, text, text, integer, text)
-
--- DROP FUNCTION IF EXISTS odk_central.get_form_version(text, text, text, integer, text);
-
-CREATE OR REPLACE FUNCTION odk_central.get_form_version(
+CREATE OR REPLACE FUNCTION get_form_version(
 	email text,
 	password text,
 	central_domain text,
@@ -715,21 +801,46 @@ EXECUTE (
 		'DROP TABLE IF EXISTS form_version;
 		 CREATE TEMP TABLE form_version(form_data json);'
 		);
-EXECUTE format('COPY form_version FROM PROGRAM $$ curl --insecure --header ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' '''||url||''' $$ ;');
+EXECUTE format('COPY form_version FROM PROGRAM $$ curl --insecure --header ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' '''||url||''' $$ ;');
 SELECT form_data->>'version' INTO current_version FROM form_version;
 RETURN current_version;
 END;
 $BODY$;
 
 
-COMMENT ON FUNCTION odk_central.get_form_version(text, text, text, integer, text)
-    IS 'description :
+COMMENT ON FUNCTION get_form_version(text, text, text, integer, text)
+    IS '
+	description
+		Asks central for the current version of the given form. Returns it as a text.
+	
+	parameters :
+		email text						-- the login (email adress) of a user who can get submissions
+		password text					-- his password
+		central_domain text 			-- ODK Central fqdn : central.mydomain.org
+		project_id integer				-- the Id of the project ex. 4
+		form_id text					-- the name of the Form ex. Sicen
+	
 	returning :
-	';-- FUNCTION: odk_central.create_draft(text, text, text, integer, text)
+		text';
 
--- DROP FUNCTION IF EXISTS odk_central.create_draft(text, text, text, integer, text);
 
-CREATE OR REPLACE FUNCTION odk_central.create_draft(
+/*
+FUNCTION: create_draft(text, text, text, integer, text)
+	description
+		Creates a new draft of the given form.
+	
+	parameters :
+		email text						-- the login (email adress) of a user who can get submissions
+		password text					-- his password
+		central_domain text 			-- ODK Central fqdn : central.mydomain.org
+		project_id integer				-- the Id of the project ex. 4
+		form_id text					-- the name of the Form ex. Sicen
+	
+	returning :
+		void
+*/
+
+CREATE OR REPLACE FUNCTION create_draft(
 	email text,
 	password text,
 	central_domain text,
@@ -748,21 +859,47 @@ EXECUTE (
 		'DROP TABLE IF EXISTS media_to_central;
 		 CREATE TEMP TABLE media_to_central(form_data text);'
 		);
-EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl  --insecure --include --request POST --header ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' --header "Content-Type:" --data-binary "" '''||url||''' $$ ;');
+EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl  --insecure --include --request POST --header ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' --header "Content-Type:" --data-binary "" '''||url||''' $$ ;');
 
 END;
 $BODY$;
 
-COMMENT ON FUNCTION odk_central.create_draft(text, text, text, integer, text)
+COMMENT ON FUNCTION create_draft(text, text, text, integer, text)
     IS 'description :
+		Creates a new draft of the given form.
+	
+	parameters :
+		email text						-- the login (email adress) of a user who can get submissions
+		password text					-- his password
+		central_domain text 			-- ODK Central fqdn : central.mydomain.org
+		project_id integer				-- the Id of the project ex. 4
+		form_id text					-- the name of the Form ex. Sicen
+	
 	returning :
-	';
+		void';
 
--- FUNCTION: odk_central.push_media_to_central(text, text, text, integer, text, text, text)
 
--- DROP FUNCTION IF EXISTS odk_central.push_media_to_central(text, text, text, integer, text, text, text);
+/*
+FUNCTION: push_media_to_central(text, text, text, integer, text, text, text)
+	description
+		Pushes the given file as an attachment of the current draft of the given form to Central.
+		The function checks the file extension and adapt the content type header of the curl command.
+		
+		
+	parameters :
+		email text						-- the login (email adress) of a user who can get submissions
+		password text					-- his password
+		central_domain text 			-- ODK Central FQDN : central.mydomain.org
+		project_id integer				-- the Id of the project ex. 4
+		form_id text					-- the name of the Form ex. Sicen
+		media_path text					-- the path where the file can be find
+		media_name text					-- the name of the file with its extension (xml or geojson or csv)
+	
+	returning :
+		void
+*/
 
-CREATE OR REPLACE FUNCTION odk_central.push_media_to_central(
+CREATE OR REPLACE FUNCTION push_media_to_central(
 	email text,
 	password text,
 	central_domain text,
@@ -790,19 +927,48 @@ EXECUTE (
 		'DROP TABLE IF EXISTS media_to_central;
 		 CREATE TEMP TABLE media_to_central(form_data text);'
 		);
-EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl --insecure --request POST --header ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' --header "Content-Type: '||content_type||'" --data-binary "@'||media_path||'/'||media_name||'" '''||url||''' $$ ;');
+EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl --insecure --request POST --header ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' --header "Content-Type: '||content_type||'" --data-binary "@'||media_path||'/'||media_name||'" '''||url||''' $$ ;');
 
 END;
 $BODY$;
 
-COMMENT ON FUNCTION odk_central.push_media_to_central(text, text, text, integer, text, text, text)
-    IS 'description :
-	returning :';
--- FUNCTION: odk_central.publish_form_version(text, text, text, integer, text, integer)
+COMMENT ON FUNCTION push_media_to_central(text, text, text, integer, text, text, text)
+    IS 'description
+		Pushes the given file as an attachment of the current draft of the given form to Central
+		The function checks the file extension and adapt the content type header of the curl command.
+		
+	parameters :
+		email text						-- the login (email adress) of a user who can get submissions
+		password text					-- his password
+		central_domain text 			-- ODK Central FQDN : central.mydomain.org
+		project_id integer				-- the Id of the project ex. 4
+		form_id text					-- the name of the Form ex. Sicen
+		media_path text					-- the path where the file can be find
+		media_name text					-- the name of the file with its extension (xml or geojson or csv)
+	
+	returning :
+		void';
 
--- DROP FUNCTION IF EXISTS odk_central.publish_form_version(text, text, text, integer, text, integer);
 
-CREATE OR REPLACE FUNCTION odk_central.publish_form_version(
+/*
+FUNCTION: publish_form_version(text, text, text, integer, text, integer)
+
+	description
+		Publishes the current draft of the given form with the given version number.
+	
+	parameters :
+		email text						-- the login (email adress) of a user who can get submissions
+		password text					-- his password
+		central_domain text 			-- ODK Central FQDN : central.mydomain.org
+		project_id integer				-- the Id of the project ex. 4
+		form_id text					-- the name of the Form ex. Sicen
+		version_number integer			-- the new version number to use
+	
+	returning :
+		void
+*/
+
+CREATE OR REPLACE FUNCTION publish_form_version(
 	email text,
 	password text,
 	central_domain text,
@@ -822,13 +988,24 @@ EXECUTE (
 		'DROP TABLE IF EXISTS media_to_central;
 		 CREATE TEMP TABLE media_to_central(form_data text);'
 		);
-EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl --insecure --include --request POST --header ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' '''||url||''' $$ ;');
+EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl --insecure --include --request POST --header ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' '''||url||''' $$ ;');
 
 END;
 $BODY$;
 
 
-COMMENT ON FUNCTION odk_central.publish_form_version(text, text, text, integer, text, integer)
-    IS 'description :
+COMMENT ON FUNCTION publish_form_version(text, text, text, integer, text, integer)
+    IS '
+	description
+		Publishes the current draft of the given form with the given version number.
+	
+	parameters :
+		email text						-- the login (email adress) of a user who can get submissions
+		password text					-- his password
+		central_domain text 			-- ODK Central FQDN : central.mydomain.org
+		project_id integer				-- the Id of the project ex. 4
+		form_id text					-- the name of the Form ex. Sicen
+		version_number integer			-- the new version number to use
+	
 	returning :
-	';
+		void';

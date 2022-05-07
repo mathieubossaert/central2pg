@@ -1,0 +1,3 @@
+
+CREATE SCHEMA IF NOT EXISTS odk_central;
+SET SEARCH_PATH TO odk_central;

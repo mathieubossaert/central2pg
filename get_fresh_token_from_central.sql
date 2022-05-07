@@ -1,6 +1,20 @@
--- FUNCTION: odk_central.get_fresh_token_from_central(text, text, text)
 
--- DROP FUNCTION IF EXISTS odk_central.get_fresh_token_from_central(text, text, text);
+
+
+/*
+FUNCTION: get_fresh_token_from_central(text, text, text)
+
+	description :
+		Ask central for a new fresh token for the given Central server with given login and password. And update the database token table with it.
+		
+	parameters :
+		email text						-- the login (email adress) of a user who can get submissions
+		password text					-- his password
+		central_domain text 			-- ODK Central FQDN
+	
+	returning :
+		void
+*/
 
 CREATE OR REPLACE FUNCTION get_fresh_token_from_central(
 	email text,
@@ -35,12 +49,12 @@ $BODY$;
 
 COMMENT ON FUNCTION  get_fresh_token_from_central(text,text,text)
 	IS 'description :
-		Ask central for a new fresh token for the given Cenyral server with given login and password. And update the database token table with it.
+		Ask central for a new fresh token for the given Central server with given login and password. And update the database token table with it.
 		
 	parameters :
 		email text						-- the login (email adress) of a user who can get submissions
 		password text					-- his password
-		central_domain text 			-- ODK Central 
+		central_domain text 			-- ODK Central FQDN
 	
 	returning :
 		void'
