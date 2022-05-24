@@ -34,7 +34,8 @@ CREATE OR REPLACE FUNCTION odk_central_to_pg(
     VOLATILE PARALLEL UNSAFE
 AS $BODY$
 BEGIN
-EXECUTE format('SELECT get_submission_from_central(
+EXECUTE format('SET search_path=odk_central,public;
+	SELECT get_submission_from_central(
 	user_name,
 	pass_word,
 	central_FQDN,

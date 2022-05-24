@@ -1,6 +1,6 @@
 /*
 Change schema name odk_central on two firts lines to what you want
-Do the same for "SET search_path=odk_central,public;" statement in both feed_data_tables_from_central(text,text) and get_fresh_token_from_central(text, text, text) function.
+Do the same for "SET search_path=odk_central,public;" statement in both odk_central_to_pg() AND get_file_from_central() functions"
 */
 CREATE SCHEMA IF NOT EXISTS odk_central;
 SET SEARCH_PATH TO odk_central;
@@ -76,7 +76,7 @@ BEGIN
 requete = concat('curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -H "Content-Type: application/json" -H "Accept: application/json" -X POST -d ''''{"email":"',email,'","password":"',password,'"}'''' https://',central_domain,'/v1/sessions');
 
 EXECUTE (
-		'SET search_path=odk_central,public;
+		'
 		DROP TABLE IF EXISTS central_token;
 		 CREATE TEMP TABLE central_token(form_data json);'
 		);
@@ -588,8 +588,7 @@ INTO non_empty;
 
 IF non_empty THEN 
 RAISE INFO 'entering feed_data_tables_from_central for table %', table_name; 
-EXECUTE format('SET search_path=odk_central,public;
-	DROP TABLE IF EXISTS data_table;
+EXECUTE format('DROP TABLE IF EXISTS data_table;
 	CREATE TABLE data_table(data_id text, key text, value json);
 	INSERT INTO  data_table(data_id, key, value) 
 	WITH RECURSIVE doc_key_and_value_recursive(data_id, key, value) AS (
@@ -677,7 +676,7 @@ BEGIN
 url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'/Submissions/',submission_id,'/attachments/',image);
 EXECUTE format('DROP TABLE IF EXISTS central_media_from_central;');
 EXECUTE format('CREATE TEMP TABLE central_media_from_central(reponse text);');
-EXECUTE format('COPY central_media_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET '||url||' -o '||destination||'/'||output||' -H "Accept: application/json" -H ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' $$ ;');
+EXECUTE format('SET search_path=odk_central,public;COPY central_media_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET '||url||' -o '||destination||'/'||output||' -H "Accept: application/json" -H ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' $$ ;');
 END;
 $BODY$;
 
@@ -733,7 +732,8 @@ CREATE OR REPLACE FUNCTION odk_central_to_pg(
     VOLATILE PARALLEL UNSAFE
 AS $BODY$
 BEGIN
-EXECUTE format('SELECT get_submission_from_central(
+EXECUTE format('SET search_path=odk_central,public;
+	SELECT get_submission_from_central(
 	user_name,
 	pass_word,
 	central_FQDN,
