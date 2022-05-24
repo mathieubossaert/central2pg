@@ -1,8 +1,11 @@
+
+
+
 /*
 FUNCTION: get_submission_from_central(text, text, text, integer, text, text, text, text, text, text, text)
 	description
 		Get json data from Central, feed a temporary table with a generic name central_json_from_central.
-		Once the temp table is created and filled, PG checks if the destination (permanent) table exists. If not PG creates it with only one json column named "value".
+		Once the temp table is created and filled, PG checks if the destination schema and (permanent) table exist. If not PG creates it with only one json column named "value".
 		PG does the same to check if a unique constraint on the __id exists. This index will be use to ignore subissions already previously inserted in the table, using an "ON CONFLICT xxx DO NOTHING"
 	
 	parameters :
@@ -20,7 +23,6 @@ FUNCTION: get_submission_from_central(text, text, text, integer, text, text, tex
 
 	comment : 	
 	future version should use filters... With more parameters
-	Waiting for centra next release (probably May 2021)
 */
 
 CREATE OR REPLACE FUNCTION get_submission_from_central(
@@ -46,9 +48,11 @@ EXECUTE (
 		'DROP TABLE IF EXISTS central_json_from_central;
 		 CREATE TEMP TABLE central_json_from_central(form_data json);'
 		);
+
 EXECUTE format('COPY central_json_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET "'||url||'" -H "Accept: application/json" -H ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' $$ CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
 
-EXECUTE format('CREATE TABLE IF NOT EXISTS '||destination_schema_name||'.'||destination_table_name||' (form_data json);');
+EXECUTE format('CREATE SCHEMA IF NOT EXISTS '||destination_schema_name||';
+CREATE TABLE IF NOT EXISTS '||destination_schema_name||'.'||destination_table_name||' (form_data json);');
 EXECUTE format ('CREATE UNIQUE INDEX IF NOT EXISTS idx_'||left(md5(random()::text),20)||'
     ON '||destination_schema_name||'.'||destination_table_name||' USING btree
     ((form_data ->> ''__id''::text) COLLATE pg_catalog."default" ASC NULLS LAST)
@@ -60,7 +64,7 @@ $BODY$;
 COMMENT ON FUNCTION  get_submission_from_central(text,text,text,integer,text,text,text,text)
 	IS 'description :
 		Get json data from Central, feed a temporary table with a generic name central_json_from_central.
-		Once the temp table is created and filled, PG checks if the destination (permanent) table exists. If not PG creates it with only one json column named "value".
+		Once the temp table is created and filled, PG checks if the destination schema and (permanent) table exists. If not PG creates it with only one json column named "value".
 		PG does the same to check if a unique constraint on the __id exists. This index will be use to ignore subissions already previously inserted in the table, using an "ON CONFLICT xxx DO NOTHING"
 	
 	parameters :
@@ -77,6 +81,4 @@ COMMENT ON FUNCTION  get_submission_from_central(text,text,text,integer,text,tex
 		void
 
 	comment : 	
-	future version should use filters... With more parameters
-	Waiting for centra next release (probably May 2021)';
-
+	future version should use filters... With more parameters';

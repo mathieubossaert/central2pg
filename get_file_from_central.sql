@@ -1,6 +1,25 @@
--- FUNCTION: get_file_from_central(text, text, text, integer, text, text, text, text, text)
 
--- DROP FUNCTION IF EXISTS get_file_from_central(text, text, text, integer, text, text, text, text, text);
+
+
+/*
+FUNCTION: get_form_tables_list_from_central(text, text, text, integer, text)
+	description :
+		Download each media mentioned in submissions
+	
+	parameters :
+		email text				-- the login (email adress) of a user who can get submissions
+		password text			-- his password
+		central_domain text 	-- ODK Central fqdn : central.mydomain.org
+		project_id integer		-- the Id of the project ex. 4
+		form_id text			-- the name of the Form ex. Sicen
+		submission_id text		-- the submission_id
+		image text				-- the image name mentionned in the submission ex. 1611941389030.jpg
+		destination text		-- Where you want curl to store the file (path to directory)
+		output text				-- filename with extension
+	
+	returning :
+		void
+*/
 
 CREATE OR REPLACE FUNCTION get_file_from_central(
 	email text,
@@ -36,7 +55,7 @@ COMMENT ON FUNCTION get_file_from_central(text, text, text, integer, text, text,
 		central_domain text 	-- ODK Central fqdn : central.mydomain.org
 		project_id integer		-- the Id of the project ex. 4
 		form_id text			-- the name of the Form ex. Sicen
-		submission_id text
+		submission_id text		-- the submission_id
 		image text				-- the image name mentionned in the submission ex. 1611941389030.jpg
 		destination text		-- Where you want curl to store the file (path to directory)
 		output text				-- filename with extension

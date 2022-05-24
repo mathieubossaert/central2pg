@@ -1,8 +1,12 @@
+
+
+
 /*
 FUNCTION: create_table_from_refcursor(text, refcursor)
 	description : 
 	-> inspired by https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
-	Create a table corresponding to the curso structure (attribute types and names)
+	Create a table corresponding to the cursor structure (attribute types and names). As json atributes are not typed, all attributes are created as text ones.
+	You'll need to cast each in your subsequent requests.
 	
 	parameters :
 	_table_name text 		-- the name of the table to create
@@ -67,7 +71,8 @@ END;
 $BODY$;
 COMMENT ON function create_table_from_refcursor(text,text,refcursor) IS 'description : 
 	-> inspired by https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
-	Create a table corresponding to the curso structure (attribute types and names)
+	Create a table corresponding to the cursor structure (attribute types and names). As json atributes are not typed, all attributes are created as text ones.
+	You''ll need to cast each in your subsequent requests.
 	
 	parameters :
 	_table_name text 		-- the name of the table to create
@@ -75,4 +80,3 @@ COMMENT ON function create_table_from_refcursor(text,text,refcursor) IS 'descrip
 	
 	returning :
 	void';
-

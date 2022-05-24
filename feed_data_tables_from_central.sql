@@ -1,14 +1,16 @@
+
+
+
 /*
 FUNCTION: feed_data_tables_from_central(text, text)
 
-!!! You need to edit and set the correct search_path at the beginig of the EXECUTE statement : SET search_path=odk_central; Replace "odk_central" by the name of the schema where you created the functions !!!
-
 	description : 
 		Feed the tables from key/pair tables. 
+	
 	parameters :
-		schema_name text	-- the schema where is the table containing plain json submission from the get_submission_from_central() function call
-		table_name text		-- the table containing plain json submission from the get_submission_from_central() function call
-		geojson_columns text -- geojson colmuns to ignore in recursion, comma delimited list like ''geopoint_widget_placementmap,point,ligne,polygone''... depending on your question names
+		schema_name text		-- the schema where is the table containing plain json submission from the get_submission_from_central() function call
+		table_name text			-- the table containing plain json submission from the get_submission_from_central() function call
+		geojson_columns text 	-- geojson colmuns to ignore in recursion, comma delimited list like ''geopoint_widget_placementmap,point,ligne,polygone''... depending on your question names
 	
 	returning :
 		void
@@ -16,10 +18,10 @@ FUNCTION: feed_data_tables_from_central(text, text)
 */
 
 CREATE OR REPLACE FUNCTION feed_data_tables_from_central(
-	schema_name text,	-- the schema where is the table containing plain json submission from the get_submission_from_central() function call
-	table_name text,	-- the table containing plain json submission from the get_submission_from_central() function call
-	geojson_columns text -- geojson colmuns to ignore in recursion, comma delimited list like 'point,polygon'... depending on your question names ex. : 'geopoint_widget_placementmap,point,ligne,polygone'
-    )
+	schema_name text,
+	table_name text,
+	geojson_columns text
+	)
     RETURNS void
     LANGUAGE 'plpgsql'
     COST 100
@@ -72,16 +74,12 @@ $BODY$;
 
 COMMENT ON FUNCTION feed_data_tables_from_central(text,text,text)
 IS 'description : 
-		Feed the tables from key/pair tables. 
+		Feed the tables from key/pair tables.
+
 	parameters :
 		schema_name text	 -- the schema where is the table containing plain json submission from the get_submission_from_central() function call
 		table_name text		 -- the table containing plain json submission from the get_submission_from_central() function call
 		geojson_columns text -- geojson colmuns to ignore in recursion, comma delimited list like ''geopoint_widget_placementmap,point,ligne,polygone''... depending on your question names
 	
 	returning :
-		void
-		
-	comment :
-		Should accept a "keys_to_ignore" parameter (as for geojson fields we want to keep as geojson).
-		For the moment the function is specific to our naming convention (point, ligne, polygone)';
-
+		void';
