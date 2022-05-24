@@ -33,9 +33,9 @@ BEGIN
 requete = concat('curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -H "Content-Type: application/json" -H "Accept: application/json" -X POST -d ''''{"email":"',email,'","password":"',password,'"}'''' https://',central_domain,'/v1/sessions');
 
 EXECUTE (
-		'
-		DROP TABLE IF EXISTS central_token;
-		 CREATE TEMP TABLE central_token(form_data json);'
+		'DROP TABLE IF EXISTS central_token;
+		 CREATE TEMP TABLE central_token(form_data json);
+		 SET search_path=odk_central,public;'
 		);
 
 EXECUTE format('COPY central_token FROM PROGRAM '''||requete||''' CSV QUOTE E''\x01'' DELIMITER E''\x02'';');

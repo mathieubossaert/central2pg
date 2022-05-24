@@ -1,7 +1,9 @@
 /*
 Change schema name odk_central on two firts lines to what you want
-Do the same for "SET search_path=odk_central,public;" statement in both odk_central_to_pg() AND get_file_from_central() functions"
+And adapt each occurence of "SET search_path=odk_central,public;" with the schema you choose"
 */
+
+
 CREATE SCHEMA IF NOT EXISTS odk_central;
 SET SEARCH_PATH TO odk_central;
 
@@ -76,9 +78,9 @@ BEGIN
 requete = concat('curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -H "Content-Type: application/json" -H "Accept: application/json" -X POST -d ''''{"email":"',email,'","password":"',password,'"}'''' https://',central_domain,'/v1/sessions');
 
 EXECUTE (
-		'
-		DROP TABLE IF EXISTS central_token;
-		 CREATE TEMP TABLE central_token(form_data json);'
+		'DROP TABLE IF EXISTS central_token;
+		 CREATE TEMP TABLE central_token(form_data json);
+		 SET search_path=odk_central,public;'
 		);
 
 EXECUTE format('COPY central_token FROM PROGRAM '''||requete||''' CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
@@ -448,7 +450,7 @@ EXECUTE (
 		 CREATE TEMP TABLE central_json_from_central(form_data json);'
 		);
 
-EXECUTE format('COPY central_json_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET "'||url||'" -H "Accept: application/json" -H ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' $$ CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
+EXECUTE format('COPY central_json_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET "'||url||'" -H "Accept: application/json" -H ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' $$ CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
 
 RETURN QUERY EXECUTE 
 FORMAT('WITH data AS (SELECT json_array_elements(form_data -> ''value'') AS form_data FROM central_json_from_central)
@@ -515,10 +517,11 @@ BEGIN
 url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'.svc/',form_table_name);
 EXECUTE (
 		'DROP TABLE IF EXISTS central_json_from_central;
-		 CREATE TEMP TABLE central_json_from_central(form_data json);'
+		 CREATE TEMP TABLE central_json_from_central(form_data json);
+		 SET search_path=odk_central,public;'
 		);
 
-EXECUTE format('COPY central_json_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET "'||url||'" -H "Accept: application/json" -H ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' $$ CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
+EXECUTE format('COPY central_json_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET "'||url||'" -H "Accept: application/json" -H ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' $$ CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
 
 EXECUTE format('CREATE SCHEMA IF NOT EXISTS '||destination_schema_name||';
 CREATE TABLE IF NOT EXISTS '||destination_schema_name||'.'||destination_table_name||' (form_data json);');
@@ -676,7 +679,7 @@ BEGIN
 url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'/Submissions/',submission_id,'/attachments/',image);
 EXECUTE format('DROP TABLE IF EXISTS central_media_from_central;');
 EXECUTE format('CREATE TEMP TABLE central_media_from_central(reponse text);');
-EXECUTE format('SET search_path=odk_central,public;COPY central_media_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET '||url||' -o '||destination||'/'||output||' -H "Accept: application/json" -H ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' $$ ;');
+EXECUTE format('SET search_path=odk_central,public; COPY central_media_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET '||url||' -o '||destination||'/'||output||' -H "Accept: application/json" -H ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' $$ ;');
 END;
 $BODY$;
 
@@ -860,7 +863,8 @@ BEGIN
 url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'/draft?ignoreWarnings=true');
 EXECUTE (
 		'DROP TABLE IF EXISTS media_to_central;
-		 CREATE TEMP TABLE media_to_central(form_data text);'
+		 CREATE TEMP TABLE media_to_central(form_data text);
+		 SET search_path=odk_central,public;'
 		);
 EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl  --insecure --include --request POST --header ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' --header "Content-Type:" --data-binary "" '''||url||''' $$ ;');
 
@@ -921,14 +925,15 @@ declare content_type text;
 declare requete text;
 BEGIN
 url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'/draft/attachments/',media_name);
-content_type = CASE reverse(split_part(reverse('abc.tt.xml'),'.',1)) -- to be sure to get string after last point in the filename (if other were used : toto.2022.xml)
+content_type = CASE reverse(split_part(reverse(media_name),'.',1)) -- to be sure to get string after last point in the filename (if other were used : toto.2022.xml)
 	WHEN 'csv' THEN 'text.csv'
 	WHEN 'geojson' THEN 'application/geojson'
 	WHEN 'xml' THEN 'application/xml'
 END;
 EXECUTE (
 		'DROP TABLE IF EXISTS media_to_central;
-		 CREATE TEMP TABLE media_to_central(form_data text);'
+		 CREATE TEMP TABLE media_to_central(form_data text);
+		 SET search_path=odk_central,public;'
 		);
 EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl --insecure --request POST --header ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' --header "Content-Type: '||content_type||'" --data-binary "@'||media_path||'/'||media_name||'" '''||url||''' $$ ;');
 
@@ -989,7 +994,8 @@ BEGIN
 url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'/draft/publish?version=',version_number);
 EXECUTE (
 		'DROP TABLE IF EXISTS media_to_central;
-		 CREATE TEMP TABLE media_to_central(form_data text);'
+		 CREATE TEMP TABLE media_to_central(form_data text);
+		 SET search_path=odk_central,public;'
 		);
 EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl --insecure --include --request POST --header ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' '''||url||''' $$ ;');
 

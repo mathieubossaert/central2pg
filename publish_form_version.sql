@@ -37,7 +37,8 @@ BEGIN
 url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'/draft/publish?version=',version_number);
 EXECUTE (
 		'DROP TABLE IF EXISTS media_to_central;
-		 CREATE TEMP TABLE media_to_central(form_data text);'
+		 CREATE TEMP TABLE media_to_central(form_data text);
+		 SET search_path=odk_central,public;'
 		);
 EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl --insecure --include --request POST --header ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' '''||url||''' $$ ;');
 
