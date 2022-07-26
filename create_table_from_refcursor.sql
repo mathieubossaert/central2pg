@@ -47,9 +47,11 @@ BEGIN
           
 -- RAISE INFO 'SQL script for table cration %',_sql; 
     EXECUTE (_sql);
-  _sql_index = 'CREATE UNIQUE INDEX IF NOT EXISTS idx_'||left(md5(random()::text),20)||' ON '||_schema_name||'.'||_table_name||' USING btree ("data_id")
-    TABLESPACE pg_default;';
+  _sql_index = 'CREATE UNIQUE INDEX IF NOT EXISTS idx_'||left(md5(random()::text),20)||' ON '||_schema_name||'.'||_table_name||' USING btree ("data_id")    TABLESPACE pg_default;';
+    
+	IF odk_central.does_index_exists(_schema_name,_table_name) IS FALSE THEN
     EXECUTE (_sql_index);
+	END IF;	
 	
 	/* ading new columns */
 	SELECT _sql_new_cols || 

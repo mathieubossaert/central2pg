@@ -1,4 +1,5 @@
 /*
 Change schema name odk_central on two firts lines to what you want
-Do the same for "SET search_path=odk_central,public;" statement in both feed_data_tables_from_central(text,text) and get_fresh_token_from_central(text, text, text) function.
+And adapt each occurence of "SET search_path=odk_central,public;" with the schema you choose"
 */
+

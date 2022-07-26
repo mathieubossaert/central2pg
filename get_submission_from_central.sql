@@ -54,10 +54,12 @@ EXECUTE format('COPY central_json_from_central FROM PROGRAM $$ curl --insecure -
 
 EXECUTE format('CREATE SCHEMA IF NOT EXISTS '||destination_schema_name||';
 CREATE TABLE IF NOT EXISTS '||destination_schema_name||'.'||destination_table_name||' (form_data json);');
-EXECUTE format ('CREATE UNIQUE INDEX IF NOT EXISTS idx_'||left(md5(random()::text),20)||'
-    ON '||destination_schema_name||'.'||destination_table_name||' USING btree
-    ((form_data ->> ''__id''::text) COLLATE pg_catalog."default" ASC NULLS LAST)
-    TABLESPACE pg_default;');
+	IF odk_central.does_index_exists(destination_schema_name,destination_table_name) IS FALSE THEN
+		EXECUTE format ('CREATE UNIQUE INDEX IF NOT EXISTS idx_'||left(md5(random()::text),20)||'
+		ON '||destination_schema_name||'.'||destination_table_name||' USING btree
+		((form_data ->> ''__id''::text) COLLATE pg_catalog."default" ASC NULLS LAST)
+		TABLESPACE pg_default;');
+	END IF;	
 EXECUTE format('INSERT into '||destination_schema_name||'.'||destination_table_name||'(form_data) SELECT json_array_elements(form_data -> ''value'') AS form_data FROM central_json_from_central ON CONFLICT ((form_data ->> ''__id''::text)) DO NOTHING;');
 END;
 $BODY$;

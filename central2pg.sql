@@ -246,6 +246,42 @@ COMMENT ON FUNCTION dynamic_pivot(text, text,refcursor) IS 'description :
 
 
 /*
+FUNCTION: does_index_exists(text, text)
+	description : 
+	checks if a unique index already exists on form_data ->> '__id'
+	
+	parameters :
+	schemaname text 		-- the name of the schema
+	tablename text		-- the name of the table
+	
+	returning :
+	boolean
+*/
+
+CREATE OR REPLACE FUNCTION odk_central.does_index_exists(
+	schemaname text, 
+	tablename text)
+	RETURNS boolean AS 
+	$BODY$
+		SELECT count(indexname)>0 AS nb_indexes
+		FROM pg_indexes
+		WHERE schemaname = $1 and tablename = $2
+		AND (indexdef ILIKE '%form_data ->> ''__id''%' OR indexdef ILIKE '%USING btree (data_id)%')
+	$BODY$ 
+LANGUAGE SQL;
+
+COMMENT ON function does_index_exists(text,text) IS 'description : 
+	checks if a unique index already exists on form_data ->> ''__id''
+	
+	parameters :
+	schemaname text 		-- the name of the schema
+	tablename text		-- the name of the table
+	
+	returning :
+	boolean';
+
+
+/*
 FUNCTION: create_table_from_refcursor(text, refcursor)
 	description : 
 	-> inspired by https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
@@ -291,9 +327,11 @@ BEGIN
           
 -- RAISE INFO 'SQL script for table cration %',_sql; 
     EXECUTE (_sql);
-  _sql_index = 'CREATE UNIQUE INDEX IF NOT EXISTS idx_'||left(md5(random()::text),20)||' ON '||_schema_name||'.'||_table_name||' USING btree ("data_id")
-    TABLESPACE pg_default;';
+  _sql_index = 'CREATE UNIQUE INDEX IF NOT EXISTS idx_'||left(md5(random()::text),20)||' ON '||_schema_name||'.'||_table_name||' USING btree ("data_id")    TABLESPACE pg_default;';
+    
+	IF odk_central.does_index_exists(_schema_name,_table_name) IS FALSE THEN
     EXECUTE (_sql_index);
+	END IF;	
 	
 	/* ading new columns */
 	SELECT _sql_new_cols || 
@@ -525,10 +563,12 @@ EXECUTE format('COPY central_json_from_central FROM PROGRAM $$ curl --insecure -
 
 EXECUTE format('CREATE SCHEMA IF NOT EXISTS '||destination_schema_name||';
 CREATE TABLE IF NOT EXISTS '||destination_schema_name||'.'||destination_table_name||' (form_data json);');
-EXECUTE format ('CREATE UNIQUE INDEX IF NOT EXISTS idx_'||left(md5(random()::text),20)||'
-    ON '||destination_schema_name||'.'||destination_table_name||' USING btree
-    ((form_data ->> ''__id''::text) COLLATE pg_catalog."default" ASC NULLS LAST)
-    TABLESPACE pg_default;');
+	IF odk_central.does_index_exists(destination_schema_name,destination_table_name) IS FALSE THEN
+		EXECUTE format ('CREATE UNIQUE INDEX IF NOT EXISTS idx_'||left(md5(random()::text),20)||'
+		ON '||destination_schema_name||'.'||destination_table_name||' USING btree
+		((form_data ->> ''__id''::text) COLLATE pg_catalog."default" ASC NULLS LAST)
+		TABLESPACE pg_default;');
+	END IF;	
 EXECUTE format('INSERT into '||destination_schema_name||'.'||destination_table_name||'(form_data) SELECT json_array_elements(form_data -> ''value'') AS form_data FROM central_json_from_central ON CONFLICT ((form_data ->> ''__id''::text)) DO NOTHING;');
 END;
 $BODY$;
