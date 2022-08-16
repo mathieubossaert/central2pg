@@ -31,3 +31,6 @@
 
 Tester avce ceci pour récuperer les elements de type array et les traiter classiquement ensuite
 Et une requete equivalent pour la table "submission" avce tous les element non array
+
+source : https://stackoverflow.com/a/67761539
+
