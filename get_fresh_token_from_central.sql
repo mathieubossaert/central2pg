@@ -43,7 +43,7 @@ RETURN QUERY EXECUTE
 FORMAT('INSERT INTO central_authentication_tokens(url, central_token, expiration)
 	   SELECT '''||central_domain||''' as url, form_data->>''token'' as central_token, (form_data->>''expiresAt'')::timestamp with time zone as expiration FROM central_token 
 	   ON CONFLICT(url) DO UPDATE SET central_token = EXCLUDED.central_token, expiration = EXCLUDED.expiration
-	   RETURNING *;');
+	   RETURNING  url, central_token, expiration;');
 END;
 $BODY$;
 
