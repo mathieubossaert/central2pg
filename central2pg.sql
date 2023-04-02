@@ -17,6 +17,9 @@ TABLE: central_authentication_tokens(text, text, text)
 		
 	attributes :
 		url text							-- Central server FQDN
+		username text 						-- Central username
+		password text 						-- Username's password
+		project_id integer					-- project_id
 		central_token text					-- The last token from this Central server
 		expiration timestamp with time zone	-- valid until this timestamp
 		
@@ -28,6 +31,9 @@ TABLE: central_authentication_tokens(text, text, text)
 CREATE TABLE IF NOT EXISTS central_authentication_tokens
 (
     url text COLLATE pg_catalog."default" NOT NULL,
+    username text NOT NULL,
+    password text NOT NULL,
+    project_id integer NOT NULL,
     central_token text COLLATE pg_catalog."default",
     expiration timestamp with time zone,
     CONSTRAINT central_authentication_tokens_pkey PRIMARY KEY (url)
@@ -39,6 +45,9 @@ COMMENT ON TABLE  central_authentication_tokens
 		
 	attributes :
 		url text							-- Central server FQDN
+		username text 						-- Central username
+		password text 						-- Username''s password
+		project_id integer					-- project_id
 		central_token text					-- The last token from this Central server
 		expiration timestamp with time zone	-- valid until this timestamp
 		
@@ -88,7 +97,7 @@ RETURN QUERY EXECUTE
 FORMAT('INSERT INTO central_authentication_tokens(url, central_token, expiration)
 	   SELECT '''||central_domain||''' as url, form_data->>''token'' as central_token, (form_data->>''expiresAt'')::timestamp with time zone as expiration FROM central_token 
 	   ON CONFLICT(url) DO UPDATE SET central_token = EXCLUDED.central_token, expiration = EXCLUDED.expiration
-	   RETURNING *;');
+	   RETURNING  url, central_token, expiration;');
 END;
 $BODY$;
 
@@ -103,10 +112,7 @@ COMMENT ON FUNCTION  get_fresh_token_from_central(text,text,text)
 	
 	returning :
 		void'
-;
-
-
-/*
+;/*
 FUNCTION: get_token_from_central(text, text, text)	
 
 	description :
@@ -462,17 +468,16 @@ FUNCTION: get_form_tables_list_from_central(text, text, text, integer, text)
 		form_id text			-- the name of the Form ex. Sicen
 	
 	returning :
-		TABLE(user_name text, pass_word text, central_fqdn text, project integer, form text, tablename text)
+		TABLE(user_name text, pass_word text, central_fqdn text, project integer, form text, tablepath text, tablename text)
 */
 
-CREATE OR REPLACE FUNCTION get_form_tables_list_from_central(
-	email text,				
-	password text,			
-	central_domain text, 	
-	project_id integer,		
-	form_id text			
-	)
-    RETURNS TABLE(user_name text, pass_word text, central_fqdn text, project integer, form text, tablename text) 
+CREATE OR REPLACE FUNCTION odk_central.get_form_tables_list_from_central(
+	email text,
+	password text,
+	central_domain text,
+	project_id integer,
+	form_id text)
+    RETURNS TABLE(user_name text, pass_word text, central_fqdn text, project integer, form text, tablepath text, tablename text) 
     LANGUAGE 'plpgsql'
     COST 100
     VOLATILE PARALLEL UNSAFE
@@ -483,20 +488,25 @@ declare url text;
 declare requete text;
 BEGIN
 url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'.svc');
-EXECUTE (
-		'DROP TABLE IF EXISTS central_json_from_central;
-		 CREATE TEMP TABLE central_json_from_central(form_data json);'
+EXECUTE format('SET search_path=odk_central,public; 
+			   DROP TABLE IF EXISTS central_json_from_central;
+			   CREATE TEMP TABLE central_json_from_central(form_data json);'
 		);
 
 EXECUTE format('COPY central_json_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET "'||url||'" -H "Accept: application/json" -H ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' $$ CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
 
 RETURN QUERY EXECUTE 
 FORMAT('WITH data AS (SELECT json_array_elements(form_data -> ''value'') AS form_data FROM central_json_from_central)
-	   SELECT '''||email||''' as user_name, '''||password||''' as pass_word, '''||central_domain||''' as central_fqdn, '||project_id||' as project, '''||form_id||''' as form, (form_data ->> ''name'') AS table_name FROM data;');
+	   SELECT '''||email||''' as user_name, '''||password||''' as pass_word, '''||central_domain||''' as central_fqdn, '||project_id||' as project, '''||form_id||''' as form, (form_data ->> ''name'') AS table_name , (string_to_array((form_data ->> ''name''),''.''))[cardinality(string_to_array((form_data ->> ''name''),''.''))] 
+	   FROM data;');
 END;
 $BODY$;
 
-COMMENT ON FUNCTION get_form_tables_list_from_central(text, text, text, integer, text) IS 'description :
+ALTER FUNCTION odk_central.get_form_tables_list_from_central(text, text, text, integer, text)
+    OWNER TO dba;
+
+COMMENT ON FUNCTION odk_central.get_form_tables_list_from_central(text, text, text, integer, text)
+    IS 'description :
 		Returns the lists of "table" composing a form. The "core" one and each one corresponding to each repeat_group.
 	
 	parameters :
@@ -507,7 +517,7 @@ COMMENT ON FUNCTION get_form_tables_list_from_central(text, text, text, integer,
 		form_id text			-- the name of the Form ex. Sicen
 	
 	returning :
-		TABLE(user_name text, pass_word text, central_fqdn text, project integer, form text, tablename text)';
+		TABLE(user_name text, pass_word text, central_fqdn text, project integer, form text, tablepath text, tablename text)';
 
 
 /*

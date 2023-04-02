@@ -1,1 +1,4 @@
-./docker_postgis_curl_plpython_pgcron/.pyodk_config.toml
+svg/*
+central2pg_in_the_data_flow.*
+organisation_fonctions.mm
+*~

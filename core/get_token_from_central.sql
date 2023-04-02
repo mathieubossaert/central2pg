@@ -1,6 +1,3 @@
-
-
-
 /*
 FUNCTION: get_token_from_central(text, text, text)	
 
