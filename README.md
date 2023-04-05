@@ -78,3 +78,7 @@ https://forum.getodk.org/t/odk-to-postgresql-to-nearly-live-webmap/36973
 
 https://forum.getodk.org/t/updating-external-datasets-from-another-forms-submissions-data-from-within-a-postgresql-database/37596?u=mathieubossaert
 
+# pl-pyODK
+
+[pyODK](https://getodk.github.io/pyodk/) offers the possibility to better interact with ODK Central's database. We are developping other function tah make use of it.
+This is a dadicated project you'll find here : [pl-pyODK](https://github.com/mathieubossaert/pl-pyodk)
