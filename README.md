@@ -1,7 +1,7 @@
 # Central2PG
 ## PostgreSQL set of functions to interact with ODK Central's trough its ODATA API for data retrieval and form management (updating)
 
-Fonctions PostgreSQL pemrettant d'interragir avec un serveir ODK Central à travers son API ODATA, pour la récupération des données et la gestion (mise à jour de formulaires)
+Fonctions PostgreSQL permettant d'interragir avec un serveur ODK Central à travers son API ODATA, pour la récupération des données et la gestion (mise à jour) de formulaires.
 
 Those functions make use of the "COPY FROM PROGRAM" PostgreSQL capability. The called program is curl. So curl need to be installed on your database server.
 Security issues are for the moment bypassed with the use of -k function, considering we know the server called by curl.
