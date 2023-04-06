@@ -1,4 +1,4 @@
-
+	
 
 
 /*
@@ -34,6 +34,7 @@ declare url text;
 declare requete text;
 BEGIN
 url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'.svc');
+
 EXECUTE format('SET search_path=odk_central,public; 
 			   DROP TABLE IF EXISTS central_json_from_central;
 			   CREATE TEMP TABLE central_json_from_central(form_data json);'
@@ -43,7 +44,13 @@ EXECUTE format('COPY central_json_from_central FROM PROGRAM $$ curl --insecure -
 
 RETURN QUERY EXECUTE 
 FORMAT('WITH data AS (SELECT json_array_elements(form_data -> ''value'') AS form_data FROM central_json_from_central)
-	   SELECT '''||email||''' as user_name, '''||password||''' as pass_word, '''||central_domain||''' as central_fqdn, '||project_id||' as project, '''||form_id||''' as form, (form_data ->> ''name'') AS table_name , (string_to_array((form_data ->> ''name''),''.''))[cardinality(string_to_array((form_data ->> ''name''),''.''))] 
+	   SELECT '''||email||''' as user_name, 
+	   '''||password||''' as pass_word, 
+	   '''||central_domain||''' as central_fqdn, 
+	   '||project_id||' as project, 
+	   '''||form_id||''' as form, 
+	   (form_data ->> ''name'') AS table_path , 
+	   (form_data ->> ''name'') AS tablename
 	   FROM data;');
 END;
 $BODY$;
