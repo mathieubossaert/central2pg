@@ -58,11 +58,13 @@ REFRESH MATERIALIZED VIEW odk_central.my_form_about_birds_new_data;
 */
 
 SELECT outils.get_file_from_central(
-	submission_id,
-	prise_image,
 	'me@mydomain.org',
 	'PassW0rd',
-	'https://my_central_server.org/v1/projects/2/forms/my_form_about_birds/Submissions',
+	'my_central_server.org', 
+	2, 
+	'my_form_about_birds',
+	submission_id,
+	prise_image,
 	'/home/postgres/medias_odk',
 	lower(concat(unaccent(replace(user_name,' ','_')),'_',prise_image))
 ) FROM odk_central.my_form_about_birds_new_data
