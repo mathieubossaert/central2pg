@@ -18,12 +18,12 @@ And start retrieving data from Central.
 
 ```sql
 SELECT odk_central.odk_central_to_pg(
-	'me@mydomain.org',			-- user
-	'PassW0rd',				-- password
-	'my_central_server.org',		-- central FQDN
-	2, 					-- the project id, 
-	'my_form_about_birds',			-- form ID
-	'odk_data',				-- schema where to creta tables and store data
+	'me@mydomain.org',                  -- user
+	'PassW0rd',                         -- password
+	'my_central_server.org',            -- central FQDN
+	2,                                  -- the project id, 
+	'my_form_about_birds',              -- form ID
+	'odk_data',                         -- schema where to creta tables and store data
 	'point_auto,point,ligne,polygone'	-- columns to ignore in json transformation to database attributes (geojson fields of GeoWidgets)
 );
 
