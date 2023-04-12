@@ -33,7 +33,7 @@ AS $BODY$
 declare url text;
 declare requete text;
 BEGIN
-url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'.svc');
+url = replace(concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'.svc'),' ','%%20');
 
 EXECUTE format('SET search_path=odk_central,public; 
 			   DROP TABLE IF EXISTS central_json_from_central;
