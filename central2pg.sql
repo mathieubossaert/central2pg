@@ -5,8 +5,6 @@ And adapt each occurence of "SET search_path=odk_central,public;" with the schem
 
 
 CREATE SCHEMA IF NOT EXISTS odk_central;
-SET SEARCH_PATH TO odk_central;
-
 
 
 /*
@@ -28,7 +26,7 @@ TABLE: central_authentication_tokens(text, text, text)
 
 */
 
-CREATE TABLE IF NOT EXISTS central_authentication_tokens
+CREATE TABLE IF NOT EXISTS odk_central.central_authentication_tokens
 (
     url text COLLATE pg_catalog."default" NOT NULL,
     username text,
@@ -39,7 +37,7 @@ CREATE TABLE IF NOT EXISTS central_authentication_tokens
     CONSTRAINT central_authentication_tokens_pkey PRIMARY KEY (url)
 );
 
-COMMENT ON TABLE  central_authentication_tokens 
+COMMENT ON TABLE  odk_central.central_authentication_tokens 
 	IS 'description :
 		Table to store Authentication token for several central servers
 		
@@ -70,7 +68,7 @@ FUNCTION: get_fresh_token_from_central(text, text, text)
 		void
 */
 
-CREATE OR REPLACE FUNCTION get_fresh_token_from_central(
+CREATE OR REPLACE FUNCTION odk_central.get_fresh_token_from_central(
 	email text,
 	password text,
 	central_domain text)
@@ -88,20 +86,19 @@ requete = concat('curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retr
 
 EXECUTE (
 		'DROP TABLE IF EXISTS central_token;
-		 CREATE TEMP TABLE central_token(form_data json);
-		 SET search_path=odk_central,public;'
+		 CREATE TEMP TABLE central_token(form_data json);'
 		);
 
 EXECUTE format('COPY central_token FROM PROGRAM '''||requete||''' CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
 RETURN QUERY EXECUTE 
-FORMAT('INSERT INTO central_authentication_tokens(url, central_token, expiration)
+FORMAT('INSERT INTO odk_central.central_authentication_tokens(url, central_token, expiration)
 	   SELECT '''||central_domain||''' as url, form_data->>''token'' as central_token, (form_data->>''expiresAt'')::timestamp with time zone as expiration FROM central_token 
 	   ON CONFLICT(url) DO UPDATE SET central_token = EXCLUDED.central_token, expiration = EXCLUDED.expiration
 	   RETURNING  url, central_token, expiration;');
 END;
 $BODY$;
 
-COMMENT ON FUNCTION  get_fresh_token_from_central(text,text,text)
+COMMENT ON FUNCTION  odk_central.get_fresh_token_from_central(text,text,text)
 	IS 'description :
 		Ask central for a new fresh token for the given Central server with given login and password. And update the database token table with it.
 		
@@ -127,7 +124,7 @@ FUNCTION: get_token_from_central(text, text, text)
 		void
 */
 
-CREATE OR REPLACE FUNCTION get_token_from_central(
+CREATE OR REPLACE FUNCTION odk_central.get_token_from_central(
 	_email text,
 	_password text,
 	_central_domain text)
@@ -137,7 +134,7 @@ CREATE OR REPLACE FUNCTION get_token_from_central(
     VOLATILE PARALLEL UNSAFE
 AS $BODY$
 WITH tokens AS (SELECT url, central_token, expiration
-	FROM central_authentication_tokens
+	FROM odk_central.central_authentication_tokens
 	WHERE url = _central_domain
 	UNION 
 	SELECT _central_domain,null,'1975-12-01'::timestamp with time zone),
@@ -146,12 +143,12 @@ SELECT url, central_token, expiration
 FROM tokens ORDER BY expiration DESC LIMIT 1)
 SELECT CASE 
 	WHEN expiration >= now()::timestamp with time zone THEN central_token 
-	ELSE (Select central_token FROM get_fresh_token_from_central(_email, _password, _central_domain)) 
+	ELSE (Select central_token FROM odk_central.get_fresh_token_from_central(_email, _password, _central_domain)) 
 END as jeton 
 	   FROM more_recent_token
 $BODY$;
 
-COMMENT ON FUNCTION  get_token_from_central(text,text,text)
+COMMENT ON FUNCTION  odk_central.get_token_from_central(text,text,text)
 	IS 'description :
 		Return a valid token, from the database id it exists and is still valid, or ask a new one (calling get_fresh_token_from_central(text,texttext) function) from ODK Central and then update the token table in the database.
 	
@@ -181,7 +178,7 @@ FUNCTION: dynamic_pivot(text, text, refcursor)
 		refcursor
 */
 
-CREATE OR REPLACE FUNCTION dynamic_pivot(
+CREATE OR REPLACE FUNCTION odk_central.dynamic_pivot(
 	central_query text,
 	headers_query text,
 	INOUT cname refcursor DEFAULT NULL::refcursor)
@@ -237,7 +234,7 @@ BEGIN
 END
 $BODY$;
 
-COMMENT ON FUNCTION dynamic_pivot(text, text,refcursor) IS 'description :
+COMMENT ON FUNCTION odk_central.dynamic_pivot(text, text,refcursor) IS 'description :
 		-> adapted from https://postgresql.verite.pro/blog/2018/06/19/crosstab-pivot.html
 		Creates a pivot table dynamically, without specifying mannually the row structure.
 		Returns a cursor use by both following function to create a table and fill it
@@ -276,7 +273,7 @@ CREATE OR REPLACE FUNCTION odk_central.does_index_exists(
 	$BODY$ 
 LANGUAGE SQL;
 
-COMMENT ON function does_index_exists(text,text) IS 'description : 
+COMMENT ON function odk_central.does_index_exists(text,text) IS 'description : 
 	checks if a unique index already exists on form_data ->> ''__id''
 	
 	parameters :
@@ -302,7 +299,7 @@ FUNCTION: create_table_from_refcursor(text, refcursor)
 	void
 */
 
-CREATE OR REPLACE FUNCTION create_table_from_refcursor(
+CREATE OR REPLACE FUNCTION odk_central.create_table_from_refcursor(
 	_schema_name text,
 	_table_name text,
 	_ref refcursor)
@@ -357,7 +354,7 @@ BEGIN
  RAISE INFO 'create_table_from_refcursor(): SQL statement is: %', COALESCE(_sql_new_cols,'no new column to add');
 END;
 $BODY$;
-COMMENT ON function create_table_from_refcursor(text,text,refcursor) IS 'description : 
+COMMENT ON function odk_central.create_table_from_refcursor(text,text,refcursor) IS 'description : 
 	-> inspired by https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
 	Create a table corresponding to the cursor structure (attribute types and names). As json atributes are not typed, all attributes are created as text ones.
 	You''ll need to cast each in your subsequent requests.
@@ -386,7 +383,7 @@ FUNCTION: insert_into_from_refcursor(text, text, refcursor)
 		void
 */
 
-CREATE OR REPLACE FUNCTION insert_into_from_refcursor(
+CREATE OR REPLACE FUNCTION odk_central.insert_into_from_refcursor(
 	_schema_name text,
 	_table_name text,
 	_ref refcursor)
@@ -441,7 +438,7 @@ BEGIN
 END;
 $BODY$;
 
-COMMENT ON function insert_into_from_refcursor(text,text,refcursor)IS '	
+COMMENT ON function odk_central.insert_into_from_refcursor(text,text,refcursor)IS '	
 	description :
 	-> adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
 	Fills the table with data
@@ -489,12 +486,11 @@ declare requete text;
 BEGIN
 url = replace(concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'.svc'),' ','%%20');
 
-EXECUTE format('SET search_path=odk_central,public; 
-			   DROP TABLE IF EXISTS central_json_from_central;
+EXECUTE format('DROP TABLE IF EXISTS central_json_from_central;
 			   CREATE TEMP TABLE central_json_from_central(form_data json);'
 		);
 
-EXECUTE format('COPY central_json_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET "'||url||'" -H "Accept: application/json" -H ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' $$ CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
+EXECUTE format('COPY central_json_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET "'||url||'" -H "Accept: application/json" -H ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' $$ CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
 
 RETURN QUERY EXECUTE 
 FORMAT('WITH data AS (SELECT json_array_elements(form_data -> ''value'') AS form_data FROM central_json_from_central)
@@ -551,7 +547,7 @@ FUNCTION: get_submission_from_central(text, text, text, integer, text, text, tex
 	future version should use filters... With more parameters
 */
 
-CREATE OR REPLACE FUNCTION get_submission_from_central(
+CREATE OR REPLACE FUNCTION odk_central.get_submission_from_central(
 	email text,						
 	password text,					
 	central_domain text, 			
@@ -572,11 +568,10 @@ BEGIN
 url = replace(concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'.svc/',form_table_name),' ','%%20');
 EXECUTE (
 		'DROP TABLE IF EXISTS central_json_from_central;
-		 CREATE TEMP TABLE central_json_from_central(form_data json);
-		 SET search_path=odk_central,public;'
+		 CREATE TEMP TABLE central_json_from_central(form_data json);'
 		);
 
-EXECUTE format('COPY central_json_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET "'||url||'" -H "Accept: application/json" -H ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' $$ CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
+EXECUTE format('COPY central_json_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET "'||url||'" -H "Accept: application/json" -H ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' $$ CSV QUOTE E''\x01'' DELIMITER E''\x02'';');
 
 EXECUTE format('CREATE SCHEMA IF NOT EXISTS '||destination_schema_name||';
 CREATE TABLE IF NOT EXISTS '||destination_schema_name||'.'||destination_table_name||' (form_data json);');
@@ -590,7 +585,7 @@ EXECUTE format('INSERT into '||destination_schema_name||'.'||destination_table_n
 END;
 $BODY$;
 
-COMMENT ON FUNCTION  get_submission_from_central(text,text,text,integer,text,text,text,text)
+COMMENT ON FUNCTION  odk_central.get_submission_from_central(text,text,text,integer,text,text,text,text)
 	IS 'description :
 		Get json data from Central, feed a temporary table with a generic name central_json_from_central.
 		Once the temp table is created and filled, PG checks if the destination schema and (permanent) table exists. If not PG creates it with only one json column named "value".
@@ -629,7 +624,7 @@ FUNCTION: feed_data_tables_from_central(text, text)
 
 */
 
-CREATE OR REPLACE FUNCTION feed_data_tables_from_central(
+CREATE OR REPLACE FUNCTION odk_central.feed_data_tables_from_central(
 	schema_name text,
 	table_name text,
 	geojson_columns text
@@ -670,10 +665,10 @@ EXECUTE format('DROP TABLE IF EXISTS data_table;
 	)SELECT data_id, key, value FROM doc_key_and_value_recursive WHERE json_typeof(value) <> ''object'' OR key = ANY(string_to_array('''||geojson_columns||''','','')) ORDER BY 2,1;'
 );
 				
-EXECUTE format('SELECT dynamic_pivot(''SELECT data_id, key, value FROM data_table ORDER BY 1,2'',''SELECT DISTINCT key FROM data_table ORDER BY 1'',''curseur_central'');
-			   		SELECT create_table_from_refcursor('''||schema_name||''','''||table_name||'_data'', ''curseur_central'');
+EXECUTE format('SELECT odk_central.dynamic_pivot(''SELECT data_id, key, value FROM data_table ORDER BY 1,2'',''SELECT DISTINCT key FROM data_table ORDER BY 1'',''curseur_central'');
+			   		SELECT odk_central.create_table_from_refcursor('''||schema_name||''','''||table_name||'_data'', ''curseur_central'');
 			   		MOVE BACKWARD FROM "curseur_central";
-			   		SELECT insert_into_from_refcursor('''||schema_name||''','''||table_name||'_data'', ''curseur_central'');
+			   		SELECT odk_central.insert_into_from_refcursor('''||schema_name||''','''||table_name||'_data'', ''curseur_central'');
 				   	CLOSE "curseur_central"'
 			  );	
 RAISE INFO 'exiting from feed_data_tables_from_central for table %', table_name; 
@@ -683,7 +678,7 @@ END IF;
 END;
 $BODY$;
 
-COMMENT ON FUNCTION feed_data_tables_from_central(text,text,text)
+COMMENT ON FUNCTION odk_central.feed_data_tables_from_central(text,text,text)
 IS 'description : 
 		Feed the tables from key/pair tables.
 
@@ -716,7 +711,7 @@ FUNCTION: get_form_tables_list_from_central(text, text, text, integer, text, tex
 		void
 */
 
-CREATE OR REPLACE FUNCTION get_file_from_central(
+CREATE OR REPLACE FUNCTION odk_central.get_file_from_central(
 	email text,
 	password text,
 	central_domain text,
@@ -736,11 +731,11 @@ BEGIN
 url = replace(concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'/Submissions/',submission_id,'/attachments/',image),' ','%%20');
 EXECUTE format('DROP TABLE IF EXISTS central_media_from_central;');
 EXECUTE format('CREATE TEMP TABLE central_media_from_central(reponse text);');
-EXECUTE format('SET search_path=odk_central,public; COPY central_media_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET '||url||' -o '||destination||'/'||output||' -H "Accept: application/json" -H ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' $$ ;');
+EXECUTE format('COPY central_media_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET '||url||' -o '||destination||'/'||output||' -H "Accept: application/json" -H ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' $$ ;');
 END;
 $BODY$;
 
-COMMENT ON FUNCTION get_file_from_central(text, text, text, integer, text, text, text, text, text)
+COMMENT ON FUNCTION odk_central.get_file_from_central(text, text, text, integer, text, text, text, text, text)
     IS 'description :
 		Download each media mentioned in submissions
 	
@@ -778,7 +773,7 @@ FUNCTION: odk_central_to_pg(text, text, text, integer, text, text)
 		void
 */
 
-CREATE OR REPLACE FUNCTION odk_central_to_pg(
+CREATE OR REPLACE FUNCTION odk_central.odk_central_to_pg(
 	email text,
 	password text,
 	central_domain text,
@@ -792,8 +787,7 @@ CREATE OR REPLACE FUNCTION odk_central_to_pg(
     VOLATILE PARALLEL UNSAFE
 AS $BODY$
 BEGIN
-EXECUTE format('SET search_path=odk_central,public;
-	SELECT get_submission_from_central(
+EXECUTE format('SELECT odk_central.get_submission_from_central(
 	user_name,
 	pass_word,
 	central_FQDN,
@@ -803,16 +797,16 @@ EXECUTE format('SET search_path=odk_central,public;
 	'''||destination_schema_name||''',
 	lower(trim(regexp_replace(left(concat(''form_'',form,''_'',split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.'')))),58), ''[^a-zA-Z\d_]'', ''_'', ''g''),''_''))
 	)
-FROM get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
+FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
 
 EXECUTE format('
-SELECT feed_data_tables_from_central(
+SELECT odk_central.feed_data_tables_from_central(
 	'''||destination_schema_name||''',lower(trim(regexp_replace(left(concat(''form_'',form,''_'',split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.'')))),58), ''[^a-zA-Z\d_]'', ''_'', ''g''),''_'')),'''||geojson_columns||''')
-FROM get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
+FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
 END;
 $BODY$;
 
-COMMENT ON FUNCTION odk_central_to_pg(text, text, text, integer, text, text, text)
+COMMENT ON FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, text, text, text)
     IS 'description :
 		wraps the calling of both get_submission_from_central() and feed_data_tables_from_central() functions 
 		
@@ -845,7 +839,7 @@ FUNCTION: get_form_version(text, text, text, integer, text)
 		void
 */
 
-CREATE OR REPLACE FUNCTION get_form_version(
+CREATE OR REPLACE FUNCTION odk_central.get_form_version(
 	email text,
 	password text,
 	central_domain text,
@@ -864,14 +858,14 @@ EXECUTE (
 		'DROP TABLE IF EXISTS form_version;
 		 CREATE TEMP TABLE form_version(form_data json);'
 		);
-EXECUTE format('COPY form_version FROM PROGRAM $$ curl --insecure --header ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' '''||url||''' $$ ;');
+EXECUTE format('COPY form_version FROM PROGRAM $$ curl --insecure --header ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' '''||url||''' $$ ;');
 SELECT form_data->>'version' INTO current_version FROM form_version;
 RETURN current_version;
 END;
 $BODY$;
 
 
-COMMENT ON FUNCTION get_form_version(text, text, text, integer, text)
+COMMENT ON FUNCTION odk_central.get_form_version(text, text, text, integer, text)
     IS '
 	description
 		Asks central for the current version of the given form. Returns it as a text.
@@ -903,7 +897,7 @@ FUNCTION: create_draft(text, text, text, integer, text)
 		void
 */
 
-CREATE OR REPLACE FUNCTION create_draft(
+CREATE OR REPLACE FUNCTION odk_central.create_draft(
 	email text,
 	password text,
 	central_domain text,
@@ -920,15 +914,14 @@ BEGIN
 url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'/draft?ignoreWarnings=true');
 EXECUTE (
 		'DROP TABLE IF EXISTS media_to_central;
-		 CREATE TEMP TABLE media_to_central(form_data text);
-		 SET search_path=odk_central,public;'
+		 CREATE TEMP TABLE media_to_central(form_data text);'
 		);
-EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl  --insecure --include --request POST --header ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' --header "Content-Type:" --data-binary "" '''||url||''' $$ ;');
+EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl  --insecure --include --request POST --header ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' --header "Content-Type:" --data-binary "" '''||url||''' $$ ;');
 
 END;
 $BODY$;
 
-COMMENT ON FUNCTION create_draft(text, text, text, integer, text)
+COMMENT ON FUNCTION odk_central.create_draft(text, text, text, integer, text)
     IS 'description :
 		Creates a new draft of the given form.
 	
@@ -963,7 +956,7 @@ FUNCTION: push_media_to_central(text, text, text, integer, text, text, text)
 		void
 */
 
-CREATE OR REPLACE FUNCTION push_media_to_central(
+CREATE OR REPLACE FUNCTION odk_central.push_media_to_central(
 	email text,
 	password text,
 	central_domain text,
@@ -989,15 +982,14 @@ content_type = CASE reverse(split_part(reverse(media_name),'.',1)) -- to be sure
 END;
 EXECUTE (
 		'DROP TABLE IF EXISTS media_to_central;
-		 CREATE TEMP TABLE media_to_central(form_data text);
-		 SET search_path=odk_central,public;'
+		 CREATE TEMP TABLE media_to_central(form_data text);'
 		);
-EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl --insecure --request POST --header ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' --header "Content-Type: '||content_type||'" --data-binary "@'||media_path||'/'||media_name||'" '''||url||''' $$ ;');
+EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl --insecure --request POST --header ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' --header "Content-Type: '||content_type||'" --data-binary "@'||media_path||'/'||media_name||'" '''||url||''' $$ ;');
 
 END;
 $BODY$;
 
-COMMENT ON FUNCTION push_media_to_central(text, text, text, integer, text, text, text)
+COMMENT ON FUNCTION odk_central.push_media_to_central(text, text, text, integer, text, text, text)
     IS 'description
 		Pushes the given file as an attachment of the current draft of the given form to Central
 		The function checks the file extension and adapt the content type header of the curl command.
@@ -1033,7 +1025,7 @@ FUNCTION: publish_form_version(text, text, text, integer, text, integer)
 		void
 */
 
-CREATE OR REPLACE FUNCTION publish_form_version(
+CREATE OR REPLACE FUNCTION odk_central.publish_form_version(
 	email text,
 	password text,
 	central_domain text,
@@ -1051,16 +1043,15 @@ BEGIN
 url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'/draft/publish?version=',version_number);
 EXECUTE (
 		'DROP TABLE IF EXISTS media_to_central;
-		 CREATE TEMP TABLE media_to_central(form_data text);
-		 SET search_path=odk_central,public;'
+		 CREATE TEMP TABLE media_to_central(form_data text);'
 		);
-EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl --insecure --include --request POST --header ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' '''||url||''' $$ ;');
+EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl --insecure --include --request POST --header ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' '''||url||''' $$ ;');
 
 END;
 $BODY$;
 
 
-COMMENT ON FUNCTION publish_form_version(text, text, text, integer, text, integer)
+COMMENT ON FUNCTION odk_central.publish_form_version(text, text, text, integer, text, integer)
     IS '
 	description
 		Publishes the current draft of the given form with the given version number.
