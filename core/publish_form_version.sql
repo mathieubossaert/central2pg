@@ -1,6 +1,5 @@
 
 
-
 /*
 FUNCTION: publish_form_version(text, text, text, integer, text, integer)
 
@@ -19,7 +18,7 @@ FUNCTION: publish_form_version(text, text, text, integer, text, integer)
 		void
 */
 
-CREATE OR REPLACE FUNCTION publish_form_version(
+CREATE OR REPLACE FUNCTION odk_central.publish_form_version(
 	email text,
 	password text,
 	central_domain text,
@@ -37,16 +36,15 @@ BEGIN
 url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'/draft/publish?version=',version_number);
 EXECUTE (
 		'DROP TABLE IF EXISTS media_to_central;
-		 CREATE TEMP TABLE media_to_central(form_data text);
-		 SET search_path=odk_central,public;'
+		 CREATE TEMP TABLE media_to_central(form_data text);'
 		);
-EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl --insecure --include --request POST --header ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' '''||url||''' $$ ;');
+EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl --insecure --include --request POST --header ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' '''||url||''' $$ ;');
 
 END;
 $BODY$;
 
 
-COMMENT ON FUNCTION publish_form_version(text, text, text, integer, text, integer)
+COMMENT ON FUNCTION odk_central.publish_form_version(text, text, text, integer, text, integer)
     IS '
 	description
 		Publishes the current draft of the given form with the given version number.

@@ -1,6 +1,5 @@
 
 
-
 /*
 FUNCTION: feed_data_tables_from_central(text, text)
 
@@ -17,7 +16,7 @@ FUNCTION: feed_data_tables_from_central(text, text)
 
 */
 
-CREATE OR REPLACE FUNCTION feed_data_tables_from_central(
+CREATE OR REPLACE FUNCTION odk_central.feed_data_tables_from_central(
 	schema_name text,
 	table_name text,
 	geojson_columns text
@@ -58,10 +57,10 @@ EXECUTE format('DROP TABLE IF EXISTS data_table;
 	)SELECT data_id, key, value FROM doc_key_and_value_recursive WHERE json_typeof(value) <> ''object'' OR key = ANY(string_to_array('''||geojson_columns||''','','')) ORDER BY 2,1;'
 );
 				
-EXECUTE format('SELECT dynamic_pivot(''SELECT data_id, key, value FROM data_table ORDER BY 1,2'',''SELECT DISTINCT key FROM data_table ORDER BY 1'',''curseur_central'');
-			   		SELECT create_table_from_refcursor('''||schema_name||''','''||table_name||'_data'', ''curseur_central'');
+EXECUTE format('SELECT odk_central.dynamic_pivot(''SELECT data_id, key, value FROM data_table ORDER BY 1,2'',''SELECT DISTINCT key FROM data_table ORDER BY 1'',''curseur_central'');
+			   		SELECT odk_central.create_table_from_refcursor('''||schema_name||''','''||table_name||'_data'', ''curseur_central'');
 			   		MOVE BACKWARD FROM "curseur_central";
-			   		SELECT insert_into_from_refcursor('''||schema_name||''','''||table_name||'_data'', ''curseur_central'');
+			   		SELECT odk_central.insert_into_from_refcursor('''||schema_name||''','''||table_name||'_data'', ''curseur_central'');
 				   	CLOSE "curseur_central"'
 			  );	
 RAISE INFO 'exiting from feed_data_tables_from_central for table %', table_name; 
@@ -71,7 +70,7 @@ END IF;
 END;
 $BODY$;
 
-COMMENT ON FUNCTION feed_data_tables_from_central(text,text,text)
+COMMENT ON FUNCTION odk_central.feed_data_tables_from_central(text,text,text)
 IS 'description : 
 		Feed the tables from key/pair tables.
 

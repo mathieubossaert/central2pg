@@ -1,6 +1,5 @@
 
 
-
 /*
 TABLE: central_authentication_tokens(text, text, text)
 
@@ -20,7 +19,7 @@ TABLE: central_authentication_tokens(text, text, text)
 
 */
 
-CREATE TABLE IF NOT EXISTS central_authentication_tokens
+CREATE TABLE IF NOT EXISTS odk_central.central_authentication_tokens
 (
     url text COLLATE pg_catalog."default" NOT NULL,
     username text,
@@ -31,7 +30,7 @@ CREATE TABLE IF NOT EXISTS central_authentication_tokens
     CONSTRAINT central_authentication_tokens_pkey PRIMARY KEY (url)
 );
 
-COMMENT ON TABLE  central_authentication_tokens 
+COMMENT ON TABLE  odk_central.central_authentication_tokens 
 	IS 'description :
 		Table to store Authentication token for several central servers
 		

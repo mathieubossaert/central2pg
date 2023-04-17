@@ -1,11 +1,10 @@
 
 
-
 /*
 FUNCTION: create_table_from_refcursor(text, refcursor)
 	description : 
 	-> inspired by https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
-	Create a table corresponding to the cursor structure (attribute types and names). As json atributes are not typed, all attributes are created as text ones.
+	Creates a table corresponding to the cursor structure (attribute types and names). As json atributes are not typed, all attributes are created as text ones.
 	You'll need to cast each in your subsequent requests.
 	
 	parameters :
@@ -16,7 +15,7 @@ FUNCTION: create_table_from_refcursor(text, refcursor)
 	void
 */
 
-CREATE OR REPLACE FUNCTION create_table_from_refcursor(
+CREATE OR REPLACE FUNCTION odk_central.create_table_from_refcursor(
 	_schema_name text,
 	_table_name text,
 	_ref refcursor)
@@ -71,9 +70,9 @@ BEGIN
  RAISE INFO 'create_table_from_refcursor(): SQL statement is: %', COALESCE(_sql_new_cols,'no new column to add');
 END;
 $BODY$;
-COMMENT ON function create_table_from_refcursor(text,text,refcursor) IS 'description : 
+COMMENT ON function odk_central.create_table_from_refcursor(text,text,refcursor) IS 'description : 
 	-> inspired by https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
-	Create a table corresponding to the cursor structure (attribute types and names). As json atributes are not typed, all attributes are created as text ones.
+	Creates a table corresponding to the cursor structure (attribute types and names). As json atributes are not typed, all attributes are created as text ones.
 	You''ll need to cast each in your subsequent requests.
 	
 	parameters :

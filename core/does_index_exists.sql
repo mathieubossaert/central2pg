@@ -1,6 +1,5 @@
 
 
-
 /*
 FUNCTION: does_index_exists(text, text)
 	description : 
@@ -26,7 +25,7 @@ CREATE OR REPLACE FUNCTION odk_central.does_index_exists(
 	$BODY$ 
 LANGUAGE SQL;
 
-COMMENT ON function does_index_exists(text,text) IS 'description : 
+COMMENT ON function odk_central.does_index_exists(text,text) IS 'description : 
 	checks if a unique index already exists on form_data ->> ''__id''
 	
 	parameters :

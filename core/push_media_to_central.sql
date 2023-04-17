@@ -1,6 +1,5 @@
 
 
-
 /*
 FUNCTION: push_media_to_central(text, text, text, integer, text, text, text)
 	description
@@ -21,7 +20,7 @@ FUNCTION: push_media_to_central(text, text, text, integer, text, text, text)
 		void
 */
 
-CREATE OR REPLACE FUNCTION push_media_to_central(
+CREATE OR REPLACE FUNCTION odk_central.push_media_to_central(
 	email text,
 	password text,
 	central_domain text,
@@ -47,15 +46,14 @@ content_type = CASE reverse(split_part(reverse(media_name),'.',1)) -- to be sure
 END;
 EXECUTE (
 		'DROP TABLE IF EXISTS media_to_central;
-		 CREATE TEMP TABLE media_to_central(form_data text);
-		 SET search_path=odk_central,public;'
+		 CREATE TEMP TABLE media_to_central(form_data text);'
 		);
-EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl --insecure --request POST --header ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' --header "Content-Type: '||content_type||'" --data-binary "@'||media_path||'/'||media_name||'" '''||url||''' $$ ;');
+EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl --insecure --request POST --header ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' --header "Content-Type: '||content_type||'" --data-binary "@'||media_path||'/'||media_name||'" '''||url||''' $$ ;');
 
 END;
 $BODY$;
 
-COMMENT ON FUNCTION push_media_to_central(text, text, text, integer, text, text, text)
+COMMENT ON FUNCTION odk_central.push_media_to_central(text, text, text, integer, text, text, text)
     IS 'description
 		Pushes the given file as an attachment of the current draft of the given form to Central
 		The function checks the file extension and adapt the content type header of the curl command.

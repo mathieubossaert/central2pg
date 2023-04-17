@@ -1,6 +1,5 @@
 /*
-Change schema name odk_central on two firts lines to what you want
-And adapt each occurence of "SET search_path=odk_central,public;" with the schema you choose"
+Change schema name odk_central everywhere in the file to the schema name you want to use.
 */
 
 
@@ -51,7 +50,6 @@ COMMENT ON TABLE  odk_central.central_authentication_tokens
 		
 	comment :
 		to be done : add user specific tokens';
-
 
 /*
 FUNCTION: get_fresh_token_from_central(text, text, text)
@@ -108,8 +106,9 @@ COMMENT ON FUNCTION  odk_central.get_fresh_token_from_central(text,text,text)
 		central_domain text 			-- ODK Central FQDN
 	
 	returning :
-		void'
-;/*
+		void';
+
+/*
 FUNCTION: get_token_from_central(text, text, text)	
 
 	description :
@@ -158,9 +157,7 @@ COMMENT ON FUNCTION  odk_central.get_token_from_central(text,text,text)
 		central_domain text 			-- ODK Central 
 	
 	returning :
-		void'
-;
-
+		void';
 
 /*
 FUNCTION: dynamic_pivot(text, text, refcursor)
@@ -247,7 +244,6 @@ COMMENT ON FUNCTION odk_central.dynamic_pivot(text, text,refcursor) IS 'descript
 	returning :
 		refcursor';
 
-
 /*
 FUNCTION: does_index_exists(text, text)
 	description : 
@@ -283,12 +279,11 @@ COMMENT ON function odk_central.does_index_exists(text,text) IS 'description :
 	returning :
 	boolean';
 
-
 /*
 FUNCTION: create_table_from_refcursor(text, refcursor)
 	description : 
 	-> inspired by https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
-	Create a table corresponding to the cursor structure (attribute types and names). As json atributes are not typed, all attributes are created as text ones.
+	Creates a table corresponding to the cursor structure (attribute types and names). As json atributes are not typed, all attributes are created as text ones.
 	You'll need to cast each in your subsequent requests.
 	
 	parameters :
@@ -356,7 +351,7 @@ END;
 $BODY$;
 COMMENT ON function odk_central.create_table_from_refcursor(text,text,refcursor) IS 'description : 
 	-> inspired by https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
-	Create a table corresponding to the cursor structure (attribute types and names). As json atributes are not typed, all attributes are created as text ones.
+	Creates a table corresponding to the cursor structure (attribute types and names). As json atributes are not typed, all attributes are created as text ones.
 	You''ll need to cast each in your subsequent requests.
 	
 	parameters :
@@ -365,7 +360,6 @@ COMMENT ON function odk_central.create_table_from_refcursor(text,text,refcursor)
 	
 	returning :
 	void';
-
 
 /*
 FUNCTION: insert_into_from_refcursor(text, text, refcursor)	
@@ -449,8 +443,7 @@ COMMENT ON function odk_central.insert_into_from_refcursor(text,text,refcursor)I
 		_ref refcursor			-- the name of the refcursor to get data from
 	
 	returning :
-	void';	
-
+	void';
 
 /*
 FUNCTION: get_form_tables_list_from_central(text, text, text, integer, text)
@@ -521,7 +514,6 @@ COMMENT ON FUNCTION odk_central.get_form_tables_list_from_central(text, text, te
 	
 	returning :
 		TABLE(user_name text, pass_word text, central_fqdn text, project integer, form text, tablepath text, tablename text)';
-
 
 /*
 FUNCTION: get_submission_from_central(text, text, text, integer, text, text, text, text, text, text, text)
@@ -607,7 +599,6 @@ COMMENT ON FUNCTION  odk_central.get_submission_from_central(text,text,text,inte
 	comment : 	
 	future version should use filters... With more parameters';
 
-
 /*
 FUNCTION: feed_data_tables_from_central(text, text)
 
@@ -690,7 +681,6 @@ IS 'description :
 	returning :
 		void';
 
-
 /*
 FUNCTION: get_form_tables_list_from_central(text, text, text, integer, text, text, text, text, text)
 	description :
@@ -752,7 +742,6 @@ COMMENT ON FUNCTION odk_central.get_file_from_central(text, text, text, integer,
 	
 	returning :
 		void';
-
 
 /*
 FUNCTION: odk_central_to_pg(text, text, text, integer, text, text)
@@ -822,7 +811,6 @@ COMMENT ON FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, tex
 	returning :
 		void';
 
-
 /*
 FUNCTION: get_form_version(text, text, text, integer, text)
 	description
@@ -880,7 +868,6 @@ COMMENT ON FUNCTION odk_central.get_form_version(text, text, text, integer, text
 	returning :
 		text';
 
-
 /*
 FUNCTION: create_draft(text, text, text, integer, text)
 	description
@@ -934,7 +921,6 @@ COMMENT ON FUNCTION odk_central.create_draft(text, text, text, integer, text)
 	
 	returning :
 		void';
-
 
 /*
 FUNCTION: push_media_to_central(text, text, text, integer, text, text, text)
@@ -1005,7 +991,6 @@ COMMENT ON FUNCTION odk_central.push_media_to_central(text, text, text, integer,
 	
 	returning :
 		void';
-
 
 /*
 FUNCTION: publish_form_version(text, text, text, integer, text, integer)

@@ -1,6 +1,5 @@
 
 
-
 /*
 FUNCTION: create_draft(text, text, text, integer, text)
 	description
@@ -17,7 +16,7 @@ FUNCTION: create_draft(text, text, text, integer, text)
 		void
 */
 
-CREATE OR REPLACE FUNCTION create_draft(
+CREATE OR REPLACE FUNCTION odk_central.create_draft(
 	email text,
 	password text,
 	central_domain text,
@@ -34,15 +33,14 @@ BEGIN
 url = concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'/draft?ignoreWarnings=true');
 EXECUTE (
 		'DROP TABLE IF EXISTS media_to_central;
-		 CREATE TEMP TABLE media_to_central(form_data text);
-		 SET search_path=odk_central,public;'
+		 CREATE TEMP TABLE media_to_central(form_data text);'
 		);
-EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl  --insecure --include --request POST --header ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' --header "Content-Type:" --data-binary "" '''||url||''' $$ ;');
+EXECUTE format('COPY media_to_central FROM PROGRAM $$ curl  --insecure --include --request POST --header ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' --header "Content-Type:" --data-binary "" '''||url||''' $$ ;');
 
 END;
 $BODY$;
 
-COMMENT ON FUNCTION create_draft(text, text, text, integer, text)
+COMMENT ON FUNCTION odk_central.create_draft(text, text, text, integer, text)
     IS 'description :
 		Creates a new draft of the given form.
 	

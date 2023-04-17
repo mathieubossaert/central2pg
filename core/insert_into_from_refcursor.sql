@@ -1,6 +1,5 @@
 
 
-
 /*
 FUNCTION: insert_into_from_refcursor(text, text, refcursor)	
 
@@ -17,7 +16,7 @@ FUNCTION: insert_into_from_refcursor(text, text, refcursor)
 		void
 */
 
-CREATE OR REPLACE FUNCTION insert_into_from_refcursor(
+CREATE OR REPLACE FUNCTION odk_central.insert_into_from_refcursor(
 	_schema_name text,
 	_table_name text,
 	_ref refcursor)
@@ -72,7 +71,7 @@ BEGIN
 END;
 $BODY$;
 
-COMMENT ON function insert_into_from_refcursor(text,text,refcursor)IS '	
+COMMENT ON function odk_central.insert_into_from_refcursor(text,text,refcursor)IS '	
 	description :
 	-> adapted from https://stackoverflow.com/questions/50837548/insert-into-fetch-all-from-cant-be-compiled/52889381#52889381
 	Fills the table with data

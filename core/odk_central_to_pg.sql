@@ -1,6 +1,5 @@
 
 
-
 /*
 FUNCTION: odk_central_to_pg(text, text, text, integer, text, text)
 
@@ -20,7 +19,7 @@ FUNCTION: odk_central_to_pg(text, text, text, integer, text, text)
 		void
 */
 
-CREATE OR REPLACE FUNCTION odk_central_to_pg(
+CREATE OR REPLACE FUNCTION odk_central.odk_central_to_pg(
 	email text,
 	password text,
 	central_domain text,
@@ -34,8 +33,7 @@ CREATE OR REPLACE FUNCTION odk_central_to_pg(
     VOLATILE PARALLEL UNSAFE
 AS $BODY$
 BEGIN
-EXECUTE format('SET search_path=odk_central,public;
-	SELECT get_submission_from_central(
+EXECUTE format('SELECT odk_central.get_submission_from_central(
 	user_name,
 	pass_word,
 	central_FQDN,
@@ -45,16 +43,16 @@ EXECUTE format('SET search_path=odk_central,public;
 	'''||destination_schema_name||''',
 	lower(trim(regexp_replace(left(concat(''form_'',form,''_'',split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.'')))),58), ''[^a-zA-Z\d_]'', ''_'', ''g''),''_''))
 	)
-FROM get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
+FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
 
 EXECUTE format('
-SELECT feed_data_tables_from_central(
+SELECT odk_central.feed_data_tables_from_central(
 	'''||destination_schema_name||''',lower(trim(regexp_replace(left(concat(''form_'',form,''_'',split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.'')))),58), ''[^a-zA-Z\d_]'', ''_'', ''g''),''_'')),'''||geojson_columns||''')
-FROM get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
+FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
 END;
 $BODY$;
 
-COMMENT ON FUNCTION odk_central_to_pg(text, text, text, integer, text, text, text)
+COMMENT ON FUNCTION odk_central.odk_central_to_pg(text, text, text, integer, text, text, text)
     IS 'description :
 		wraps the calling of both get_submission_from_central() and feed_data_tables_from_central() functions 
 		

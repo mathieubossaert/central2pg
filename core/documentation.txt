@@ -1,5 +1,4 @@
 /*
-Change schema name odk_central on two firts lines to what you want
-And adapt each occurence of "SET search_path=odk_central,public;" with the schema you choose"
+Change schema name odk_central everywhere in the file to the schema name you want to use.
 */
 

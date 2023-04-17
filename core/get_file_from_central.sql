@@ -1,6 +1,5 @@
 
 
-
 /*
 FUNCTION: get_form_tables_list_from_central(text, text, text, integer, text, text, text, text, text)
 	description :
@@ -21,7 +20,7 @@ FUNCTION: get_form_tables_list_from_central(text, text, text, integer, text, tex
 		void
 */
 
-CREATE OR REPLACE FUNCTION get_file_from_central(
+CREATE OR REPLACE FUNCTION odk_central.get_file_from_central(
 	email text,
 	password text,
 	central_domain text,
@@ -41,11 +40,11 @@ BEGIN
 url = replace(concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'/Submissions/',submission_id,'/attachments/',image),' ','%%20');
 EXECUTE format('DROP TABLE IF EXISTS central_media_from_central;');
 EXECUTE format('CREATE TEMP TABLE central_media_from_central(reponse text);');
-EXECUTE format('SET search_path=odk_central,public; COPY central_media_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET '||url||' -o '||destination||'/'||output||' -H "Accept: application/json" -H ''Authorization: Bearer '||get_token_from_central(email, password, central_domain)||''' $$ ;');
+EXECUTE format('COPY central_media_from_central FROM PROGRAM $$ curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -X GET '||url||' -o '||destination||'/'||output||' -H "Accept: application/json" -H ''Authorization: Bearer '||odk_central.get_token_from_central(email, password, central_domain)||''' $$ ;');
 END;
 $BODY$;
 
-COMMENT ON FUNCTION get_file_from_central(text, text, text, integer, text, text, text, text, text)
+COMMENT ON FUNCTION odk_central.get_file_from_central(text, text, text, integer, text, text, text, text, text)
     IS 'description :
 		Download each media mentioned in submissions
 	
