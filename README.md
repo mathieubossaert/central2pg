@@ -82,7 +82,7 @@ https://forum.getodk.org/t/updating-external-datasets-from-another-forms-submiss
 
 # pl-pyODK
 
-[pyODK](https://getodk.github.io/pyodk/) offers the possibility to better interact with ODK Central's database.
+[pyODK](https://getodk.github.io/pyodk/) offers the possibility to better interact with ODK Central's database and filter data we want to pull.
 We are developping new functions that make use of it.
 
-This is a dadicated project you'll find here : [pl-pyODK](https://github.com/mathieubossaert/pl-pyodk)
+This is a dedicated project you'll find here : [pl-pyODK](https://github.com/mathieubossaert/pl-pyodk)
