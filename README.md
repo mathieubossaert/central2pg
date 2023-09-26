@@ -1,7 +1,7 @@
 # Central2PG
 ## PostgreSQL set of functions to interact with ODK Central's trough its ODATA API for data retrieval and form management (updating)
 
-Fonctions PostgreSQL permettant d'interragir avec un serveur ODK Central à travers son API ODATA, pour la récupération des données et la gestion (mise à jour) de formulaires.
+PostgreSQL functions for interacting with an ODK Central server by using its ODATA API, to pull data and manage forms.
 
 Those functions make use of the "COPY FROM PROGRAM" PostgreSQL capability. The called program is curl. So curl need to be installed on your database server.
 Security issues are for the moment bypassed with the use of -k function, considering we know the server called by curl.
@@ -72,6 +72,25 @@ WHERE image IS NOT NULL;
 */
 ```
 
+## New with Central 2023.4 : filtering subtables for more lightweight processes
+
+Since [Central 2023.4](https://forum.getodk.org/t/odk-central-2023-4-more-visible-entities-and-single-sign-on/43212) (september 2023) it is possible to filter subtables using system attributes like sumissionDate.
+Now we can only ask for data since a particular date instead of downloading all the data since the form was created.
+
+Here is an example to get only data that has been submitted to Central since the last time we pulled data from Central.
+```sql
+SELECT odk_central.odk_central_to_pg(
+	'me@mydomain.org', 
+	'PassW0rd', 
+	'my_central_server.org', 
+	2, 
+	'my_form_about_birds', 
+	'odk_data',
+	'localisation', 
+	(SELECT max("submissionDate"::text) FROM odk_central.my_form_about_birds_submissions_data)
+);
+```
+
 ## Short french demo with english subtitles
 https://www.youtube.com/watch?v=Z4rY1ejNlW0&t
 
@@ -86,3 +105,4 @@ https://forum.getodk.org/t/updating-external-datasets-from-another-forms-submiss
 We are developping new functions that make use of it.
 
 This is a dedicated project you'll find here : [pl-pyODK](https://github.com/mathieubossaert/pl-pyodk)
+
