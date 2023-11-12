@@ -498,9 +498,6 @@ FORMAT('WITH data AS (SELECT json_array_elements(form_data -> ''value'') AS form
 END;
 $BODY$;
 
-ALTER FUNCTION odk_central.get_form_tables_list_from_central(text, text, text, integer, text)
-    OWNER TO dba;
-
 COMMENT ON FUNCTION odk_central.get_form_tables_list_from_central(text, text, text, integer, text)
     IS 'description :
 		Returns the lists of "table" composing a form. The "core" one and each one corresponding to each repeat_group.
