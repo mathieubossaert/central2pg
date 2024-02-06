@@ -80,7 +80,9 @@ AS $BODY$
 declare url text;
 declare requete text;
 BEGIN
-requete = concat('curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -H "Content-Type: application/json" -H "Accept: application/json" -X POST -d ''''{"email":"',email,'","password":"',password,'"}'''' https://',central_domain,'/v1/sessions');
+requete = concat('curl --insecure --max-time 30 --retry 5 --retry-delay 0 --retry-max-time 40 -H "Content-Type: application/json" -H "Accept: application/json" -X POST -d ''''{"email":"',email,'","password":"',replace(password,'\','\\'),'"}'''' https://',central_domain,'/v1/sessions');
+
+RAISE INFO 'requete curl : %',requete;
 
 EXECUTE (
 		'DROP TABLE IF EXISTS central_token;
