@@ -479,7 +479,7 @@ AS $BODY$
 declare url text;
 declare requete text;
 BEGIN
-url = replace(concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'.svc'),' ','%%20');
+url = replace(concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',replace(form_id,'%','%%'),'.svc'),' ','%%20');
 
 EXECUTE format('DROP TABLE IF EXISTS central_json_from_central;
 			   CREATE TEMP TABLE central_json_from_central(form_data json);'
@@ -493,7 +493,7 @@ FORMAT('WITH data AS (SELECT json_array_elements(form_data -> ''value'') AS form
 	   '''||password||''' as pass_word, 
 	   '''||central_domain||''' as central_fqdn, 
 	   '||project_id||' as project, 
-	   '''||form_id||''' as form, 
+	   '''||replace(form_id,'%','%%')||''' as form, 
 	   (form_data ->> ''name'') AS table_path , 
 	   (form_data ->> ''name'') AS tablename
 	   FROM data;');
@@ -869,17 +869,17 @@ EXECUTE format('SELECT odk_central.get_submission_from_central(
 	pass_word,
 	central_FQDN,
 	project,
-	form,
+	replace(form,''%%'',''%%%%''),
 	tablename,
 	'''||destination_schema_name||''',
 	lower(trim(regexp_replace(left(concat(''form_'',form,''_'',split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.'')))),58), ''[^a-zA-Z\d_]'', ''_'', ''g''),''_''))
 	)
-FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
+FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||replace(form_id,'%','%%')||''');');
 
 EXECUTE format('
 SELECT odk_central.feed_data_tables_from_central(
 	'''||destination_schema_name||''',lower(trim(regexp_replace(left(concat(''form_'',form,''_'',split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.'')))),58), ''[^a-zA-Z\d_]'', ''_'', ''g''),''_'')),'''||geojson_columns||''')
-FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
+FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||replace(form_id,'%','%%')||''');');
 END;
 $BODY$;
 
@@ -946,12 +946,12 @@ EXECUTE format('SELECT odk_central.get_submission_from_central(
 	lower(trim(regexp_replace(left(concat(''form_'',form,''_'',split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.'')))),58), ''[^a-zA-Z\d_]'', ''_'', ''g''),''_''))
 	,'''||last_submission_timestamp||'''
 	)
-FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
+FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||replace(form_id,'%','%%')||''');');
 
 EXECUTE format('
 SELECT odk_central.feed_data_tables_from_central(
 	'''||destination_schema_name||''',lower(trim(regexp_replace(left(concat(''form_'',form,''_'',split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.'')))),58), ''[^a-zA-Z\d_]'', ''_'', ''g''),''_'')),'''||geojson_columns||''')
-FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||form_id||''');');
+FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||replace(form_id,'%','%%')||''');');
 END;
 $BODY$;
 

@@ -32,7 +32,7 @@ AS $BODY$
 declare url text;
 declare requete text;
 BEGIN
-url = replace(concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',form_id,'.svc'),' ','%%20');
+url = replace(concat('https://',central_domain,'/v1/projects/',project_id,'/forms/',replace(form_id,'%','%%'),'.svc'),' ','%%20');
 
 EXECUTE format('DROP TABLE IF EXISTS central_json_from_central;
 			   CREATE TEMP TABLE central_json_from_central(form_data json);'
@@ -46,7 +46,7 @@ FORMAT('WITH data AS (SELECT json_array_elements(form_data -> ''value'') AS form
 	   '''||password||''' as pass_word, 
 	   '''||central_domain||''' as central_fqdn, 
 	   '||project_id||' as project, 
-	   '''||form_id||''' as form, 
+	   '''||replace(form_id,'%','%%')||''' as form, 
 	   (form_data ->> ''name'') AS table_path , 
 	   (form_data ->> ''name'') AS tablename
 	   FROM data;');
