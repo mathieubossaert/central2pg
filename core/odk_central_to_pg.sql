@@ -17,6 +17,9 @@ FUNCTION: odk_central_to_pg(text, text, text, integer, text, text)
 	
 	returning :
 		void
+		
+Table name in PostgreSQL must be less or equal to 63 chatracters. So you have to keep in mind that table names are a concat of 'form_' string, form_id and repeat name and be concise when naming repeats and form_id and avoid special chars, space or accent in form ids.
+
 */
 
 CREATE OR REPLACE FUNCTION odk_central.odk_central_to_pg(
@@ -41,13 +44,13 @@ EXECUTE format('SELECT odk_central.get_submission_from_central(
 	replace(form,''%%'',''%%%%''),
 	tablename,
 	'''||destination_schema_name||''',
-	lower(trim(regexp_replace(left(concat(''form_'',form,''_'',split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.'')))),58), ''[^a-zA-Z\d_]'', ''_'', ''g''),''_''))
+	lower(trim(regexp_replace(left(concat(''form_'',CASE WHEN length(form)>41 THEN left(form,10) ELSE form END,''_'',split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.'')))),58), ''[^a-zA-Z\d_]'', ''_'', ''g''),''_''))
 	)
 FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||replace(form_id,'%','%%')||''');');
 
 EXECUTE format('
 SELECT odk_central.feed_data_tables_from_central(
-	'''||destination_schema_name||''',lower(trim(regexp_replace(left(concat(''form_'',form,''_'',split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.'')))),58), ''[^a-zA-Z\d_]'', ''_'', ''g''),''_'')),'''||geojson_columns||''')
+	'''||destination_schema_name||''',lower(trim(regexp_replace(left(concat(''form_'',CASE WHEN length(form)>41 THEN left(form,10) ELSE form END,''_'',split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.'')))),58), ''[^a-zA-Z\d_]'', ''_'', ''g''),''_'')),'''||geojson_columns||''')
 FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||replace(form_id,'%','%%')||''');');
 END;
 $BODY$;
@@ -112,14 +115,14 @@ EXECUTE format('SELECT odk_central.get_submission_from_central(
 	form,
 	tablename,
 	'''||destination_schema_name||''',
-	lower(trim(regexp_replace(left(concat(''form_'',form,''_'',split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.'')))),58), ''[^a-zA-Z\d_]'', ''_'', ''g''),''_''))
+	lower(trim(regexp_replace(left(concat(''form_'',CASE WHEN length(form)>41 THEN left(form,10) ELSE form END,''_'',split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.'')))),58), ''[^a-zA-Z\d_]'', ''_'', ''g''),''_''))
 	,'''||last_submission_timestamp||'''
 	)
 FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||replace(form_id,'%','%%')||''');');
 
 EXECUTE format('
 SELECT odk_central.feed_data_tables_from_central(
-	'''||destination_schema_name||''',lower(trim(regexp_replace(left(concat(''form_'',form,''_'',split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.'')))),58), ''[^a-zA-Z\d_]'', ''_'', ''g''),''_'')),'''||geojson_columns||''')
+	'''||destination_schema_name||''',lower(trim(regexp_replace(left(concat(''form_'',CASE WHEN length(form)>41 THEN left(form,10) ELSE form END,''_'',split_part(tablename,''.'',cardinality(regexp_split_to_array(tablename,''\.'')))),58), ''[^a-zA-Z\d_]'', ''_'', ''g''),''_'')),'''||geojson_columns||''')
 FROM odk_central.get_form_tables_list_from_central('''||email||''','''||password||''','''||central_domain||''','||project_id||','''||replace(form_id,'%','%%')||''');');
 END;
 $BODY$;
