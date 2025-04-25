@@ -47,7 +47,7 @@ BEGIN
 -- RAISE INFO 'SQL script for table cration %',_sql; 
     EXECUTE (_sql);
 	
-	/* ading new columns */
+/* ading new columns */
 	SELECT _sql_new_cols || 
            STRING_AGG(concat('ALTER TABLE ' , _schema_name ,'.', _table_name , ' ADD COLUMN "',val.key :: text,'" text'), ';') ||';'
         INTO _sql_new_cols
